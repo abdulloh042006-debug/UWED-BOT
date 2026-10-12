@@ -1,6 +1,7 @@
 import { verifyInitData, signSession, verifySession, scoreMatch, nextRequestStatus, cleanText, randomId } from './core.js';
 import { page, client } from './ui.js';
 import { evidence, teams } from './teams.js';
+import { protectedTier, adminTier, isTopAdmin } from './admin-access.js';
 import { admin } from './admin.js';
 import { ensureMigrations } from './migrations.js';
 
@@ -54,7 +55,7 @@ async function api(request, env, path, method) {
     let user = await row(env.DB, 'SELECT * FROM users WHERE telegram_user_id=?', tg.id);
     if (!user) {
       const id = randomId();
-      const role = tg.id === String(env.BOOTSTRAP_ADMIN_TELEGRAM_ID || '') ? 'admin' : 'student';
+      const role = protectedTier(tg.id, env) || tg.id === String(env.BOOTSTRAP_ADMIN_TELEGRAM_ID || '') ? 'admin' : 'student';
       try {
         await env.DB.batch([
           env.DB.prepare('INSERT INTO users(id,telegram_user_id,display_name,role) VALUES(?,?,?,?)').bind(id,tg.id,tg.firstName || 'Talaba',role),
@@ -66,6 +67,12 @@ async function api(request, env, path, method) {
         if (!user) throw e;
       }
       user ||= await row(env.DB, 'SELECT * FROM users WHERE telegram_user_id=?', tg.id);
+    }
+    // Runtime-provisioned top admins can have existing student accounts.
+    // Promote only identities verified from signed Telegram initData.
+    if (protectedTier(tg.id, env) && user.role !== 'admin') {
+      await run(env.DB, "UPDATE users SET role='admin' WHERE id=?", user.id);
+      user.role = 'admin';
     }
     if(user.suspended_at) return fail(403,'suspended','Hisobingiz to`xtatilgan');
     const session = await signSession(user.id, env.SESSION_SECRET);
@@ -80,7 +87,7 @@ async function api(request, env, path, method) {
   if(maintenance?.value==='true' && !['admin','moderator'].includes(me.role)) return fail(503,'maintenance','Xizmat vaqtincha yopiq');
   const teamResult=await teams(request,env,path,method,me);
   if (teamResult) return teamResult;
-  if (path === 'me' && method === 'GET') return json(await profile(env.DB, me.id));
+  if (path === 'me' && method === 'GET') return json({ ...(await profile(env.DB, me.id)), admin_tier: adminTier(me, env) });
   const publicUser=path.match(/^profiles\/([^/]+)$/);
   if (publicUser && method==='GET') {
     const p=await profile(env.DB,publicUser[1]);
@@ -345,7 +352,8 @@ async function webhook(request, env) {
       const url=new URL(env.MINIAPP_URL); if(url.protocol!=='https:') return fail(503,'config','HTTPS manzil sozlanmagan');
       if(route)url.searchParams.set('screen',route);
       // All entry routes use the same Web App; route hints are not identity.
-      try { await telegram(env,'sendMessage',{chat_id:chat,text:command==='/help'?'UWED Talent Network: ilovani ochib profil, moslar va sessiyalarni boshqaring.':'UWED Talent Network ilovasini oching:',reply_markup:{inline_keyboard:[[{text:'Ilovani ochish',web_app:{url:url.toString()}}]]}}); }
+      const text=command==='/help'?'UWED Talent Network: profilni to‘ldiring, mos sheriklarni toping va bilim almashish sessiyalarini boshqaring.':command==='/start'?'Assalomu alaykum! UWED Talent Network platformasiga xush kelibsiz.\nBilim almashing, mentorlar bilan bog‘laning, loyiha jamoalarini toping va yutuqlaringizni portfolio orqali ko‘rsating.':'UWED Talent Network ilovasini oching:';
+      try { await telegram(env,'sendMessage',{chat_id:chat,text,reply_markup:{inline_keyboard:[[{text:'Ilovani ochish',web_app:{url:url.toString()}}]]}}); }
       catch (e) { await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id)); throw e; }
     }
   }
