@@ -1,4 +1,5 @@
 import { cleanText, randomId } from './core.js';
+import { adminTier, protectedTier, isTopAdmin, visibleAdminLabel } from './admin-access.js';
 
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const fail=(s,c,m)=>json({error:{code:c,message:m}},s);
@@ -25,6 +26,7 @@ export async function admin(request,env,path,method,me){
   if(!path.startsWith('admin/'))return null;
   const db=env.DB,route=path.slice(6),url=new URL(request.url);
   if(!staff(me))return fail(403,'role','Ruxsat yo`q');
+  const tier=adminTier(me,env);
   try{
     if(route==='dashboard/summary'&&method==='GET'){
       const summary={students:await count(db,"SELECT count(*) n FROM users WHERE role='student'"),active_users:await count(db,'SELECT count(*) n FROM users WHERE suspended_at IS NULL'),active_mentors:await count(db,"SELECT count(*) n FROM users WHERE role='mentor' AND suspended_at IS NULL"),skill_exchanges:await count(db,'SELECT count(*) n FROM exchange_requests'),active_projects:await count(db,"SELECT count(*) n FROM projects WHERE status IN ('recruiting','active') AND hidden_at IS NULL"),pending_verifications:await count(db,"SELECT (SELECT count(*) FROM verification_requests WHERE status='pending')+(SELECT count(*) FROM portfolio_items WHERE status='pending') n"),reports:await count(db,"SELECT count(*) n FROM reports WHERE status='pending'")};
@@ -33,24 +35,29 @@ export async function admin(request,env,path,method,me){
     if(route==='users'&&method==='GET'){
       const p=paging(url),q=(url.searchParams.get('q')||'').trim();if(q.length>100)throw Error('filter');
       const role=choice(url.searchParams.get('role'),enums.role),status=choice(url.searchParams.get('status'),enums.userStatus);
-      let where=' WHERE 1=1',args=[];if(q){where+=' AND (u.display_name LIKE ? OR u.telegram_user_id LIKE ?)';args.push('%'+q.replace(/[%_\\]/g,'\\$&')+'%','%'+q.replace(/[%_\\]/g,'\\$&')+'%')}
+      // Hide the full administrator from administrative user listings.
+      let where=' WHERE u.telegram_user_id<>?',args=[String(env.FULL_ADMIN_TELEGRAM_ID || '')];if(q){where+=' AND (u.display_name LIKE ? OR u.telegram_user_id LIKE ?)';args.push('%'+q.replace(/[%_\\]/g,'\\$&')+'%','%'+q.replace(/[%_\\]/g,'\\$&')+'%')}
       if(role){where+=' AND u.role=?';args.push(role)}if(status){where+=status==='active'?' AND u.suspended_at IS NULL':' AND u.suspended_at IS NOT NULL'}
       const total=await count(db,'SELECT count(*) n FROM users u'+where,...args);
-      return listed(await all(db,'SELECT u.id,u.display_name,u.role,u.verified_university,u.suspended_at,u.created_at,p.faculty FROM users u JOIN profiles p ON p.user_id=u.id'+where+' ORDER BY u.created_at DESC,u.id DESC LIMIT ? OFFSET ?',...args,p.limit,p.offset),total,p);
+      const users=await all(db,'SELECT u.id,u.telegram_user_id,u.display_name,u.role,u.verified_university,u.suspended_at,u.created_at,p.faculty FROM users u JOIN profiles p ON p.user_id=u.id'+where+' ORDER BY u.created_at DESC,u.id DESC LIMIT ? OFFSET ?',...args,p.limit,p.offset);
+      return listed(users.map(({telegram_user_id,...u})=>({...u,admin_label:visibleAdminLabel(adminTier({...u,telegram_user_id},env))})),total,p);
     }
     const user=route.match(/^users\/([^/]+)$/);
     if(user&&method==='GET'){
-      const u=await one(db,'SELECT u.id,u.telegram_user_id,u.display_name,u.role,u.verified_university,u.suspended_at,u.suspended_reason,u.created_at,p.faculty,p.bio FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?',user[1]);if(!u)return fail(404,'user','Foydalanuvchi topilmadi');
+      const u=await one(db,'SELECT u.id,u.telegram_user_id,u.display_name,u.role,u.verified_university,u.suspended_at,u.suspended_reason,u.created_at,p.faculty,p.bio FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?',user[1]);if(!u || protectedTier(u.telegram_user_id,env)==='owner')return fail(404,'user','Foydalanuvchi topilmadi');
       const activity={sessions:await count(db,'SELECT count(*) n FROM exchange_requests WHERE sender_id=? OR recipient_id=?',u.id,u.id),projects:await count(db,'SELECT count(*) n FROM project_members WHERE user_id=?',u.id),portfolio:await count(db,'SELECT count(*) n FROM portfolio_items WHERE owner_id=?',u.id),reports:await count(db,'SELECT count(*) n FROM reports WHERE reporter_id=?',u.id)};
-      return json({item:u,activity});
+      const {telegram_user_id,...publicUser}=u;
+      return json({item:{...publicUser,admin_label:visibleAdminLabel(adminTier(u,env))},activity});
     }
     const userAction=route.match(/^users\/([^/]+)\/(suspend|restore|role)$/);
     if(userAction&&method==='POST'){
       if(me.role!=='admin')return fail(403,'role','Faqat admin uchun');
-      const [,id,action]=userAction,u=await one(db,'SELECT id,role,suspended_at FROM users WHERE id=?',id);if(!u)return fail(404,'user','Foydalanuvchi topilmadi');
+      const [,id,action]=userAction,u=await one(db,'SELECT id,role,telegram_user_id,suspended_at FROM users WHERE id=?',id);if(!u)return fail(404,'user','Foydalanuvchi topilmadi');
       if(id===me.id)return fail(409,'self','O`zingizning hisobingizni o`zgartira olmaysiz');
-      if(u.role==='admin'&&action!=='role')return fail(403,'admin','Boshqa admin hisobini to`xtatib bo`lmaydi');
+      if(protectedTier(u.telegram_user_id,env))return fail(403,'protected','Bosh administrator hisobini bu yerdan o‘zgartirib bo‘lmaydi');
+      if(u.role==='admin'&&!isTopAdmin(tier))return fail(403,'admin','Administrator hisobini faqat bosh admin boshqaradi');
       if(action==='role'){
+        if(!isTopAdmin(tier))return fail(403,'role','Administratorlarni faqat bosh admin tayinlaydi');
         const b=await body(request);if(!enums.role.includes(b.role))throw Error('role');
         if(u.role===b.role)return json({ok:true,role:u.role});
         await db.batch([db.prepare('UPDATE users SET role=? WHERE id=?').bind(b.role,id),db.prepare('INSERT INTO audit_log(id,actor_id,action,object_type,object_id,details) VALUES(?,?,?,?,?,?)').bind(randomId(),me.id,'role','user',id,JSON.stringify({from:u.role,to:b.role}))]);
@@ -125,7 +132,7 @@ export async function admin(request,env,path,method,me){
       await db.batch([db.prepare('UPDATE projects SET hidden_at=CURRENT_TIMESTAMP,hidden_by=? WHERE id=? AND hidden_at IS NULL').bind(me.id,p.id),db.prepare('INSERT INTO audit_log(id,actor_id,action,object_type,object_id) VALUES(?,?,?,?,?)').bind(randomId(),me.id,'hide','project',p.id)]);return json({ok:true});
     }
     if(route==='announcements'&&method==='POST'){
-      if(me.role!=='admin')return fail(403,'role','Faqat admin uchun');
+      if(!isTopAdmin(tier))return fail(403,'role','E’lonlar bosh administratorlar uchun');
       const b=await body(request),audience=choice(b.audience,enums.audience),text=cleanText(b.text,1000);if(!audience||!text)throw Error('announcement');
       const setting=await one(db,"SELECT value FROM admin_settings WHERE key='announcement_enabled'");if(setting?.value!=='true')return fail(409,'setting','E`lonlar o`chirilgan');
       const id=randomId();await run(db,'INSERT INTO announcements(id,audience,text,created_by) VALUES(?,?,?,?)',id,audience,text,me.id);
@@ -142,7 +149,7 @@ export async function admin(request,env,path,method,me){
     if(route==='settings'&&method==='GET')return json({items:await all(db,'SELECT key,value,updated_at FROM admin_settings ORDER BY key')});
     const setting=route.match(/^settings\/([^/]+)$/);
     if(setting&&method==='PATCH'){
-      const key=setting[1];if(!keys[key])return fail(404,'setting','Sozlama topilmadi');if(me.role!=='admin')return fail(403,'role','Faqat admin uchun');
+      const key=setting[1];if(!keys[key])return fail(404,'setting','Sozlama topilmadi');if(!isTopAdmin(tier))return fail(403,'role','Sozlamalar bosh administratorlar uchun');
       const b=await body(request);if(typeof b.value!=='boolean')throw Error('setting');const value=String(b.value),old=await one(db,'SELECT value FROM admin_settings WHERE key=?',key);
       await db.batch([db.prepare('UPDATE admin_settings SET value=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE key=?').bind(value,me.id,key),db.prepare('INSERT INTO audit_log(id,actor_id,action,object_type,object_id,details) VALUES(?,?,?,?,?,?)').bind(randomId(),me.id,'setting','setting',key,JSON.stringify({from:old.value,to:value}))]);return json({key,value});
     }
