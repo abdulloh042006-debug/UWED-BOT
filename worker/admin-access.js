@@ -3,7 +3,7 @@
 // No Telegram ID or elevated identity is embedded in the client or repository.
 export function protectedTier(telegramId, env) {
   const id = String(telegramId || '');
-  if (!/^[1-9]\d{3,19}$/.test(id)) return null;
+  if (!/^[1-9]\d{0,19}$/.test(id)) return null;
   if (env.FULL_ADMIN_TELEGRAM_ID && id === String(env.FULL_ADMIN_TELEGRAM_ID)) return 'owner';
   if (env.HEAD_ADMIN_TELEGRAM_ID && id === String(env.HEAD_ADMIN_TELEGRAM_ID)) return 'head';
   return null;
