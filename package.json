@@ -1,0 +1,12 @@
+{
+  "name": "uwed-talent-network",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs",
+    "check": "node --check worker/index.js && node --check worker/core.js && node --check worker/teams.js && node --check worker/admin.js && node --check worker/ui.js && node --check scripts/dev.mjs && npm test && npm run build"
+  },
+  "engines": { "node": ">=20" }
+}
