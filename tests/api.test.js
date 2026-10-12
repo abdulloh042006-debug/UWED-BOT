@@ -13,7 +13,7 @@ async function signed(id){const p=new URLSearchParams({auth_date:String(Math.flo
 function blankD1(database=new DatabaseSync(':memory:')){const db=database;db.exec('PRAGMA foreign_keys=ON');return {raw:db,prepare(sql){let args=[];return {bind(...values){args=values;return this},first(){return db.prepare(sql).get(...args)||null},all(){return {results:db.prepare(sql).all(...args)}},run(){const r=db.prepare(sql).run(...args);return {meta:{changes:r.changes}}}}},batch(items){db.exec('BEGIN');try{const result=items.map(x=>x.run());db.exec('COMMIT');return result}catch(e){db.exec('ROLLBACK');throw e}}}}
 function d1(){const db=blankD1();for(const {id,sql} of migrations){db.raw.exec(sql);db.raw.exec('CREATE TABLE IF NOT EXISTS _sites_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');db.raw.prepare('INSERT INTO _sites_migrations(id) VALUES (?)').run(id)}return db}
 test('Sites D1 migrations apply in order and are safe to recheck',async()=>{const db=blankD1(),expected=migrations.map(x=>x.id);assert.deepEqual(await ensureMigrations(db),expected);assert.equal(db.raw.prepare('SELECT count(*) AS n FROM _sites_migrations').get().n,expected.length);assert.ok(db.raw.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get());assert.deepEqual(await ensureMigrations(blankD1(db.raw)),expected)});
-function setup(){const db=d1(),env={DB:db,TELEGRAM_BOT_TOKEN:'test-token',SESSION_SECRET:'s'.repeat(32),TELEGRAM_WEBHOOK_SECRET:'hook-secret',MINIAPP_URL:'https://example.test/'};async function call(path,method='GET',body,cookie='',headers={}){const h={...headers};if(body!==undefined)h['content-type']='application/json';if(cookie)h.cookie=cookie;const req=new Request(base+path,{method,headers:h,body:body!==undefined?JSON.stringify(body):undefined});const res=await worker.fetch(req,env);return {status:res.status,data:await res.json(),cookie:res.headers.get('set-cookie')?.split(';')[0]}}async function login(id){const r=await call('/api/v1/auth/telegram','POST',{initData:await signed(id)});assert.equal(r.status,200);return r.cookie}return {db,env,call,login}}
+function setup(){const db=d1(),env={DB:db,TELEGRAM_BOT_TOKEN:'test-token',SESSION_SECRET:'s'.repeat(32),TELEGRAM_WEBHOOK_SECRET:'hook-secret',MINIAPP_URL:'https://example.test/',HEAD_ADMIN_TELEGRAM_ID:'999'};async function call(path,method='GET',body,cookie='',headers={}){const h={...headers};if(body!==undefined)h['content-type']='application/json';if(cookie)h.cookie=cookie;const req=new Request(base+path,{method,headers:h,body:body!==undefined?JSON.stringify(body):undefined});const res=await worker.fetch(req,env);return {status:res.status,data:await res.json(),cookie:res.headers.get('set-cookie')?.split(';')[0]}}async function login(id){const r=await call('/api/v1/auth/telegram','POST',{initData:await signed(id)});assert.equal(r.status,200);return r.cookie}return {db,env,call,login}}
 test('outside Telegram: public shell has no personal data and API rejects',async()=>{const x=setup();let res=await worker.fetch(new Request(base+'/'),x.env);assert.equal(res.status,200);assert.doesNotMatch(await res.text(),/User 101/);assert.equal((await x.call('/api/v1/me')).status,401);assert.equal((await x.call('/api/v1/auth/telegram','POST',{initData:'fake'})).status,401)});
 test('profile ownership, skills, matching, invitation and mutual session confirmation',async()=>{
  const x=setup(),a=await x.login(101),b=await x.login(202);
@@ -238,4 +238,42 @@ test('suspended recipient cannot accept an old Telegram inline invitation',async
   assert.equal((await x.call('/api/v1/bot/webhook','POST',callback(82),'',headers)).status,200);
   assert.equal(x.db.raw.prepare('SELECT status FROM exchange_requests WHERE id=?').get(invitation.data.id).status,'accepted');
  } finally {globalThis.fetch=old}
+});
+
+
+test('top administrator tiers are bound to signed Telegram identities and hidden owner listing',async()=>{
+ const x=setup();x.env.FULL_ADMIN_TELEGRAM_ID='777';
+ const owner=await x.login(777),head=await x.login(999),person=await x.login(101);
+ const ownProfile=(await x.call('/api/v1/me','GET',undefined,owner)).data;
+ const headProfile=(await x.call('/api/v1/me','GET',undefined,head)).data;
+ assert.equal(ownProfile.role,'admin');
+ assert.equal(ownProfile.admin_tier,'owner');
+ assert.equal(headProfile.admin_tier,'head');
+ assert.equal((await x.call('/api/v1/me','GET',undefined,person)).data.admin_tier,'none');
+ const list=(await x.call('/api/v1/admin/users?limit=100','GET',undefined,head)).data;
+ assert.equal(list.items.length,2);
+ assert.ok(list.items.every(u=>u.id!==ownProfile.id));
+ assert.equal(list.items.find(u=>u.id===headProfile.id).admin_label,'Bosh Admin');
+ assert.equal((await x.call('/api/v1/admin/users/'+ownProfile.id,'GET',undefined,head)).status,404);
+ assert.equal((await x.call('/api/v1/admin/users/'+ownProfile.id+'/role','POST',{role:'student'},head)).status,403);
+ assert.equal((await x.call('/api/v1/admin/users/'+headProfile.id+'/role','POST',{role:'student'},owner)).status,403);
+});
+
+test('head administrator appoints ordinary admins while ordinary admins cannot escalate roles',async()=>{
+ const x=setup();x.env.FULL_ADMIN_TELEGRAM_ID='777';
+ const owner=await x.login(777),head=await x.login(999),normal=await x.login(101),target=await x.login(202);
+ const regularId=(await x.call('/api/v1/me','GET',undefined,normal)).data.id;
+ const targetId=(await x.call('/api/v1/me','GET',undefined,target)).data.id;
+ assert.equal((await x.call('/api/v1/admin/users/'+regularId+'/role','POST',{role:'admin'},head)).status,200);
+ assert.equal((await x.call('/api/v1/me','GET',undefined,normal)).data.admin_tier,'admin');
+ assert.equal((await x.call('/api/v1/admin/dashboard/summary','GET',undefined,normal)).status,200);
+ assert.equal((await x.call('/api/v1/admin/users/'+targetId+'/role','POST',{role:'admin'},normal)).status,403);
+ assert.equal((await x.call('/api/v1/admin/roles','POST',{user_id:targetId,role:'admin'},normal)).status,403);
+ assert.equal((await x.call('/api/v1/admin/announcements','POST',{audience:'all',text:'Broadcast'},normal)).status,403);
+ assert.equal((await x.call('/api/v1/admin/settings/maintenance_mode','PATCH',{value:true},normal)).status,403);
+ assert.equal((await x.call('/api/v1/admin/users/'+targetId+'/suspend','POST',{reason:'Spam'},normal)).status,200);
+ assert.equal((await x.call('/api/v1/admin/users/'+regularId+'/suspend','POST',{reason:'Blocked'},head)).status,200);
+ assert.equal((await x.call('/api/v1/admin/users/'+regularId+'/restore','POST',{},owner)).status,200);
+ const audit=x.db.raw.prepare("SELECT count(*) AS n FROM audit_log WHERE action='role'").get().n;
+ assert.ok(audit>=1);
 });
