@@ -182,12 +182,15 @@ test('announcement delivery is queued through notification outbox for its audien
 
 test('browser client authenticates via Telegram and renders live admin API data',async()=>{
  const x=setup();x.env.BOOTSTRAP_ADMIN_TELEGRAM_ID='999';await x.login(101);
- const root={innerHTML:'',handlers:{},querySelector(){return null},addEventListener(name,fn){this.handlers[name]=fn},prepend(){}},initData=await signed(999);let cookie='';
- const browserFetch=async(path,options={})=>{const headers={...options.headers};if(cookie)headers.cookie=cookie;const response=await worker.fetch(new Request(base+path,{method:options.method||'GET',headers,body:options.body}),x.env);if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response};
+ const root={innerHTML:'',handlers:{},querySelector(){return null},addEventListener(name,fn){this.handlers[name]=fn},prepend(){}},initData=await signed(999);let cookie='',requests=[];
+ const browserFetch=async(path,options={})=>{requests.push(path);const headers={...options.headers};if(cookie)headers.cookie=cookie;const response=await worker.fetch(new Request(base+path,{method:options.method||'GET',headers,body:options.body}),x.env);if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response};
  new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,console});
  const wait=async expected=>{for(let i=0;i<100;i++){if(root.innerHTML.includes(expected))return;await new Promise(resolve=>setTimeout(resolve,10))}assert.fail('Client did not render '+expected+': '+root.innerHTML.slice(0,300))};
  await wait('UWED Talent Network');
  await root.handlers.click({target:{closest:()=>({dataset:{view:'admin'}})}});await wait('Faol foydalanuvchilar');
  await root.handlers.click({target:{closest:()=>({dataset:{adminTab:'users'},disabled:false})}});await wait('User 101');
  assert.match(root.innerHTML,/Foydalanuvchilar/);assert.match(root.innerHTML,/User 101/);
+ await root.handlers.click({target:{closest:()=>({dataset:{view:'matches'}})}});await wait('Qidirish');
+ await root.handlers.submit({preventDefault(){},target:{id:'search',dataset:{},elements:{q:{value:'IELTS'}},querySelector:()=>({disabled:false})}});
+ assert.ok(requests.some(x=>x==='/api/v1/matches?q=IELTS'));
 });
