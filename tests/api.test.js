@@ -189,7 +189,12 @@ test('browser client authenticates via Telegram and renders live admin API data'
  new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,console});
  const wait=async expected=>{for(let i=0;i<100;i++){if(root.innerHTML.includes(expected))return;await new Promise(resolve=>setTimeout(resolve,10))}assert.fail('Client did not render '+expected+': '+root.innerHTML.slice(0,300))};
  await wait('UWED Talent Network');
+ assert.match(root.innerHTML,/class="app-nav"/,'student nav must be rendered');
+ assert.match(root.innerHTML,/<svg class="ui-icon/,'icons must be SVG and bundled locally');
+ assert.match(root.innerHTML,/Nimadan boshlaymiz/,'dashboard should have clear next actions');
  await root.handlers.click({target:{closest:()=>({dataset:{view:'admin'}})}});await wait('Faol foydalanuvchilar');
+ assert.match(root.innerHTML,/Administrator ish maydoni/,'admin has separate branded header');
+ assert.match(root.innerHTML,/Talaba rejimi/,'admin needs an explicit return switch');
  await root.handlers.click({target:{closest:()=>({dataset:{adminTab:'users'},disabled:false})}});await wait('User 101');
  assert.match(root.innerHTML,/Foydalanuvchilar/);assert.match(root.innerHTML,/User 101/);
  await root.handlers.click({target:{closest:()=>({dataset:{view:'matches'}})}});await wait('Qidirish');
@@ -279,4 +284,16 @@ test('head administrator appoints ordinary admins while ordinary admins cannot e
  assert.equal((await x.call('/api/v1/admin/users/'+regularId+'/restore','POST',{},owner)).status,200);
  const audit=x.db.raw.prepare("SELECT count(*) AS n FROM audit_log WHERE action='role'").get().n;
  assert.ok(audit>=1);
+});
+
+
+test('production HTML includes responsive brand styling and no external icon font',async()=>{
+ const {page}=await import('../worker/ui.js');
+ const html=page();
+ assert.match(html,/--accent:#38567e/);
+ assert.match(html,/--burgundy:#8a0019/);
+ assert.match(html,/--gold:#d4af37/);
+ assert.match(html,/nav\.app-nav/);
+ assert.match(html,/safe-area-inset-bottom/);
+ assert.doesNotMatch(html,/fonts\.googleapis\.com|fontawesome|cdnjs\.cloudflare\.com/);
 });
