@@ -194,3 +194,46 @@ test('browser client authenticates via Telegram and renders live admin API data'
  await root.handlers.submit({preventDefault(){},target:{id:'search',dataset:{},elements:{q:{value:'IELTS'}},querySelector:()=>({disabled:false})}});
  assert.ok(requests.some(x=>x==='/api/v1/matches?q=IELTS'));
 });
+
+test('pending skills keep associations and become matchable after approval',async()=>{
+ const x=setup();x.env.BOOTSTRAP_ADMIN_TELEGRAM_ID='999';
+ const admin=await x.login(999),a=await x.login(101),b=await x.login(202);
+ const name='New Skill';
+ assert.equal((await x.call('/api/v1/skills','POST',{name,direction:'learn'},a)).status,202);
+ assert.equal((await x.call('/api/v1/skills','POST',{name,direction:'teach'},b)).status,202);
+ const skill=x.db.raw.prepare('SELECT id FROM skills WHERE name=?').get(name);
+ assert.equal(x.db.raw.prepare('SELECT COUNT(*) AS n FROM user_skills WHERE skill_id=?').get(skill.id).n,2);
+ assert.ok(!(await x.call('/api/v1/me','GET',undefined,a)).data.learn.includes(name));
+ assert.ok(!(await x.call('/api/v1/me','GET',undefined,b)).data.teach.includes(name));
+ assert.equal((await x.call('/api/v1/matches','GET',undefined,a)).data.items.length,0);
+ assert.equal((await x.call('/api/v1/admin/skills/'+skill.id,'PATCH',{approved:true},a)).status,403);
+ assert.equal((await x.call('/api/v1/admin/skills/'+skill.id,'PATCH',{approved:true},admin)).status,200);
+ assert.ok((await x.call('/api/v1/me','GET',undefined,a)).data.learn.includes(name));
+ assert.ok((await x.call('/api/v1/me','GET',undefined,b)).data.teach.includes(name));
+ assert.equal((await x.call('/api/v1/matches','GET',undefined,a)).data.items[0].id,(await x.call('/api/v1/me','GET',undefined,b)).data.id);
+ await x.call('/api/v1/skills','POST',{name,direction:'learn'},a);
+ assert.equal(x.db.raw.prepare('SELECT COUNT(*) AS n FROM user_skills WHERE skill_id=?').get(skill.id).n,2);
+});
+
+test('suspended recipient cannot accept an old Telegram inline invitation',async()=>{
+ const x=setup();x.env.BOOTSTRAP_ADMIN_TELEGRAM_ID='999';
+ const admin=await x.login(999),a=await x.login(101),b=await x.login(202);
+ await x.call('/api/v1/skills','POST',{name:'IELTS',direction:'learn'},a);
+ await x.call('/api/v1/skills','POST',{name:'IELTS',direction:'teach'},b);
+ const recipient=(await x.call('/api/v1/me','GET',undefined,b)).data.id;
+ const invitation=await x.call('/api/v1/exchange-requests','POST',{recipient_id:recipient,skill_id:'skill-ielts'},a);
+ assert.equal(invitation.status,201);
+ assert.equal((await x.call('/api/v1/admin/users/'+recipient+'/suspend','POST',{reason:'Review'},admin)).status,200);
+ const before=x.db.raw.prepare('SELECT COUNT(*) AS n FROM notifications').get().n;
+ const old=globalThis.fetch;globalThis.fetch=async()=>new Response('{}',{status:200});
+ const headers={'X-Telegram-Bot-Api-Secret-Token':'hook-secret'};
+ const callback=id=>({update_id:id,callback_query:{id:'cb'+id,from:{id:202},data:'ex:accept:'+invitation.data.id}});
+ try {
+  assert.equal((await x.call('/api/v1/bot/webhook','POST',callback(81),'',headers)).status,200);
+  assert.equal(x.db.raw.prepare('SELECT status FROM exchange_requests WHERE id=?').get(invitation.data.id).status,'sent');
+  assert.equal(x.db.raw.prepare('SELECT COUNT(*) AS n FROM notifications').get().n,before);
+  assert.equal((await x.call('/api/v1/admin/users/'+recipient+'/restore','POST',{},admin)).status,200);
+  assert.equal((await x.call('/api/v1/bot/webhook','POST',callback(82),'',headers)).status,200);
+  assert.equal(x.db.raw.prepare('SELECT status FROM exchange_requests WHERE id=?').get(invitation.data.id).status,'accepted');
+ } finally {globalThis.fetch=old}
+});
