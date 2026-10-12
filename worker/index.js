@@ -2,6 +2,7 @@ import { verifyInitData, signSession, verifySession, scoreMatch, nextRequestStat
 import { page, client } from './ui.js';
 import { evidence, teams } from './teams.js';
 import { admin } from './admin.js';
+import { ensureMigrations } from './migrations.js';
 
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers } });
 const fail = (status, code, message) => json({ error: { code, message } }, status);
@@ -355,6 +356,10 @@ export default {
   async fetch(request, env, ctx) {
     const url=new URL(request.url), path=url.pathname, method=request.method;
     try {
+      if (env.DB && (path.startsWith('/api/v1/') || path==='/api/v1/bot/webhook')) {
+        try { await ensureMigrations(env.DB); }
+        catch { return fail(503,'database','Ma`lumotlar bazasini tayyorlab bo`lmadi'); }
+      }
       if (path==='/api/v1/bot/webhook' && method==='POST') {
         const result=await webhook(request,env);
         if (ctx?.waitUntil && env.DB && result.status<500) ctx.waitUntil(flushOutbox(env));
