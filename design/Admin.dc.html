@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>UWED Admin Panel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif}
+button,input,textarea{font-family:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.press{transition:transform .14s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,opacity .2s}
+.press:active:not(:disabled){transform:scale(.96)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.9);opacity:0}60%{transform:scale(1.03);opacity:1}100%{transform:scale(1)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheetDown{from{transform:none}to{transform:translateY(100%)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@keyframes growY{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.in{animation:rise .26s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*45ms)}
+.pop{animation:pop .26s cubic-bezier(.34,1.4,.64,1) both}
+.slide{animation:slideIn .24s cubic-bezier(.2,.8,.2,1) both}
+.grow{transform-origin:bottom;animation:growY .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*40ms)}
+.sk{position:relative;overflow:hidden;background:var(--soft);border-radius:8px}
+.sk:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--line),transparent);animation:shimmer 1.2s linear infinite}
+.bar{transform-origin:left;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.chip{height:36px;padding:0 14px;border-radius:18px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);white-space:nowrap}
+.chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.pri,.sec,.dng{height:44px;border-radius:12px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.pri{background:var(--ac);color:#fff}.sec{background:var(--soft)}.dng{background:#C0321F;color:#fff}
+.tag{height:24px;padding:0 10px;border-radius:12px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap}
+.inp{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:0 14px;height:44px;font-size:14px}
+.h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.sub{font-size:13px;line-height:1.45;color:var(--sub)}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important}}
+</style>
+</helmet>
+<div style="{{rootVars}}width:390px;height:844px;box-sizing:border-box;position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);color:var(--ink)">
+
+<div style="display:flex;align-items:center;gap:10px;padding:16px 20px 4px">
+<sc-if value="{{isSub}}" hint-placeholder-val="{{ false }}"><button class="press" aria-label="Orqaga" onClick="{{goMore}}" style="width:44px;height:44px;margin-left:-12px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button></sc-if>
+<h1 class="h1" style="flex:1">{{title}}</h1>
+<span class="tag" style="background:var(--soft);color:var(--ac)">{{roleLabel}}</span>
+</div>
+
+<div style="flex:1;overflow-y:auto;min-height:0;padding:12px 20px 12px">
+<sc-if value="{{loading}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px"><sc-for list="{{skels}}" as="k" hint-placeholder-count="4"><div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><div class="sk" style="height:14px;width:45%"></div><div class="sk" style="height:12px;width:80%"></div></div></sc-for></div>
+</sc-if>
+
+<sc-if value="{{showDash}}" hint-placeholder-val="{{ true }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:14px">
+<div class="sub" style="padding:10px 12px;border-radius:12px;border:1px dashed var(--line)"><b>DEV namuna.</b> Backend ulanmaguncha raqamlar haqiqiy emas. Kutilayotgan tasdiq va shikoyat soni interfeys holatidan olingan.</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="8"><div class="card in" style="--i:{{s.i}};padding:14px;display:flex;flex-direction:column;gap:4px"><span style="font-size:24px;font-weight:800;color:{{s.color}}">{{s.v}}</span><span class="sub" style="font-size:12px">{{s.l}}</span></div></sc-for>
+</div>
+<div class="card in" style="--i:8;padding:16px;display:flex;flex-direction:column;gap:12px"><span style="font-size:14px;font-weight:800">Haftalik faollik <span class="sub" style="font-weight:500">(namuna)</span></span>
+<div style="display:flex;align-items:flex-end;gap:8px;height:96px"><sc-for list="{{bars}}" as="b" hint-placeholder-count="7"><div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><div class="grow" style="--i:{{b.i}};width:100%;height:{{b.h}};background:var(--ac);border-radius:6px 6px 2px 2px;opacity:{{b.o}}"></div><span style="font-size:10px;color:var(--sub)">{{b.d}}</span></div></sc-for></div></div>
+<div class="card in" style="--i:9;padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:14px;font-weight:800">So‘nggi amallar</span>
+<sc-for list="{{auditShort}}" as="a" hint-placeholder-count="3"><div style="display:flex;gap:10px;font-size:13px"><span style="color:var(--sub);min-width:52px">{{a.t}}</span><span>{{a.x}}</span></div></sc-for></div>
+</div>
+</sc-if>
+
+<sc-if value="{{showUsers}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:12px">
+<input class="inp" aria-label="Foydalanuvchini qidirish" placeholder="Ism bo‘yicha qidirish" value="{{q}}" onInput="{{onQ}}">
+<div style="display:flex;gap:8px;overflow-x:auto"><sc-for list="{{userFilters}}" as="f" hint-placeholder-count="4"><button class="chip press {{f.cls}}" onClick="{{f.tap}}">{{f.label}}</button></sc-for></div>
+<sc-for list="{{users}}" as="u" hint-placeholder-count="4"><button class="card press in" style="--i:{{u.i}};padding:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%" onClick="{{u.open}}"><div style="width:40px;height:40px;border-radius:20px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--ac)">{{u.init}}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">{{u.name}}</div><div class="sub" style="font-size:12px">{{u.role}} · {{u.fac}}</div></div><span class="tag" style="background:{{u.bg}};color:{{u.fg}}">{{u.status}}</span></button></sc-for>
+<sc-if value="{{noUsers}}" hint-placeholder-val="{{ false }}"><div class="card pop sub" style="padding:24px;text-align:center">Mos foydalanuvchi topilmadi. Qidiruvni o‘zgartiring.</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{showVerify}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:8px;overflow-x:auto"><sc-for list="{{vTabs}}" as="f" hint-placeholder-count="4"><button class="chip press {{f.cls}}" onClick="{{f.tap}}">{{f.label}}</button></sc-for></div>
+<sc-for list="{{vItems}}" as="v" hint-placeholder-count="3"><div class="card in" style="--i:{{v.i}};padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><div style="font-size:14px;font-weight:700">{{v.title}}</div><div class="sub" style="font-size:12px">{{v.who}}</div></div><sc-if value="{{v.decided}}" hint-placeholder-val="{{ false }}"><span class="tag" style="background:{{v.bg}};color:{{v.fg}}">{{v.stateLabel}}</span></sc-if></div>
+<div class="sub">{{v.note}}</div>
+<sc-if value="{{v.reasonShow}}" hint-placeholder-val="{{ false }}"><div class="sub" style="color:var(--bad)">Sabab: {{v.reason}}</div></sc-if>
+<sc-if value="{{v.pending}}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:8px"><button class="sec press" onClick="{{v.reject}}">Rad etish</button><button class="pri press" onClick="{{v.approve}}">Tasdiqlash</button></div></sc-if>
+</div></sc-for>
+<sc-if value="{{noV}}" hint-placeholder-val="{{ false }}"><div class="card pop sub" style="padding:24px;text-align:center">{{noVText}}</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{showReports}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{reports}}" as="r" hint-placeholder-count="3"><div class="card in" style="--i:{{r.i}};padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;gap:8px"><div style="font-size:14px;font-weight:700">{{r.title}}</div><span class="tag" style="background:{{r.bg}};color:{{r.fg}}">{{r.stateLabel}}</span></div>
+<div class="sub" style="font-size:12px">{{r.kind}} · {{r.who}}</div>
+<div style="padding:10px 12px;border-radius:10px;background:var(--soft);font-size:13px;line-height:1.45"><span class="sub" style="font-size:11px;font-weight:700">DALIL</span><br>{{r.ev}}</div>
+<sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:8px"><button class="sec press" onClick="{{r.dismiss}}">Rad etish</button><button class="pri press" onClick="{{r.resolve}}">Hal qilish</button></div><button class="dng press" onClick="{{r.remove}}">Kontentni olib tashlash</button></sc-if>
+</div></sc-for>
+<sc-if value="{{noRep}}" hint-placeholder-val="{{ false }}"><div class="card pop sub" style="padding:24px;text-align:center">Ko‘rib chiqiladigan shikoyat yo‘q.</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{showMore}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{moreItems}}" as="m" hint-placeholder-count="3"><button class="card press in" style="--i:{{m.i}};padding:16px;display:flex;align-items:center;gap:12px;text-align:left;width:100%" onClick="{{m.tap}}"><div style="flex:1"><div style="font-size:15px;font-weight:700">{{m.label}}</div><div class="sub" style="font-size:12px">{{m.hint}}</div></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{showProj}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:8px;overflow-x:auto"><sc-for list="{{pFilters}}" as="f" hint-placeholder-count="4"><button class="chip press {{f.cls}}" onClick="{{f.tap}}">{{f.label}}</button></sc-for></div>
+<sc-for list="{{projects}}" as="p" hint-placeholder-count="3"><div class="card in" style="--i:{{p.i}};padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;gap:8px"><div style="font-size:14px;font-weight:700">{{p.name}}</div><span class="tag" style="background:{{p.bg}};color:{{p.fg}}">{{p.status}}</span></div>
+<div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:6px;border-radius:3px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{p.fill}})"></div></div><span class="sub" style="font-size:12px">{{p.members}} / {{p.max}}</span></div>
+<sc-if value="{{p.canMod}}" hint-placeholder-val="{{ false }}"><button class="dng press" onClick="{{p.hide}}">Kontentni yashirish</button></sc-if>
+</div></sc-for>
+<sc-if value="{{noProj}}" hint-placeholder-val="{{ false }}"><div class="card pop sub" style="padding:24px;text-align:center">Bu holatda loyiha yo‘q.</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{showAnn}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:12px">
+<span class="sub" style="font-weight:700">Auditoriya</span>
+<div style="display:flex;gap:8px;overflow-x:auto"><sc-for list="{{audiences}}" as="a" hint-placeholder-count="3"><button class="chip press {{a.cls}}" onClick="{{a.tap}}">{{a.label}}</button></sc-for></div>
+<textarea class="inp" aria-label="Xabar matni" placeholder="Xabar matni" rows="4" style="height:104px;padding:12px 14px;resize:none" onInput="{{onMsg}}">{{msg}}</textarea>
+<span class="sub" style="font-weight:700">Ko‘rinishi</span>
+<div class="card pop" style="padding:14px;border-radius:16px 16px 16px 4px;font-size:14px;line-height:1.5"><span class="sub" style="font-size:11px;font-weight:700">UWED BOT</span><br>{{preview}}</div>
+<button class="pri press" disabled="{{annOff}}" onClick="{{askSend}}">Yuborish</button>
+<sc-if value="{{delivery}}" hint-placeholder-val="{{ false }}"><div class="card pop" style="padding:14px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;font-weight:800">Yetkazilish holati</span><span class="tag" style="background:var(--soft);color:var(--ac)">{{delLabel}}</span></div><div style="height:4px;border-radius:2px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{delFill}})"></div></div><span class="sub" style="font-size:12px">Namuna jarayon. Haqiqiy holat backend bildirishnoma tizimidan keladi.</span></div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{showSet}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{settings}}" as="s" hint-placeholder-count="3"><div class="card in" style="--i:{{s.i}};padding:14px;display:flex;align-items:center;gap:12px"><div style="flex:1"><div style="font-size:14px;font-weight:700">{{s.label}}</div><div class="sub" style="font-size:12px">{{s.hint}}</div></div><button class="press" role="switch" aria-checked="{{s.on}}" aria-label="{{s.label}}" disabled="{{s.locked}}" onClick="{{s.tap}}" style="width:48px;height:44px;display:flex;align-items:center"><span style="width:44px;height:26px;border-radius:13px;background:{{s.bg}};position:relative;transition:background-color .2s"><span style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;transform:translateX({{s.x}});transition:transform .22s cubic-bezier(.34,1.4,.64,1)"></span></span></button></div></sc-for>
+<span class="sub">Qulflangan sozlamalar faqat Admin roli uchun. Haqiqiy tekshiruv serverda bajariladi.</span>
+<span style="font-size:15px;font-weight:800;margin-top:6px">Audit jurnali</span>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><sc-for list="{{audit}}" as="a" hint-placeholder-count="4"><div class="pop" style="display:flex;gap:10px;font-size:13px"><span style="color:var(--sub);min-width:52px">{{a.t}}</span><span>{{a.x}}</span></div></sc-for></div>
+</div>
+</sc-if>
+</div>
+
+<div style="position:relative;display:flex;margin:0 12px 12px;padding:4px;border-radius:20px;background:var(--card);border:1px solid var(--line)">
+<div style="position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 5);border-radius:16px;background:var(--soft);transform:translateX({{navShift}});transition:transform .3s cubic-bezier(.34,1.3,.64,1)"></div>
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5"><button class="press" aria-label="{{t.label}}" onClick="{{t.tap}}" style="position:relative;flex:1;height:52px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:{{t.color}}">{{t.label}}<sc-if value="{{t.badge}}" hint-placeholder-val="{{ false }}"><span class="pop" style="position:absolute;top:6px;right:10px;min-width:16px;height:16px;border-radius:8px;background:#C0321F;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center">{{t.n}}</span></sc-if></button></sc-for>
+</div>
+
+<sc-if value="{{sheetOn}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:5"><div onClick="{{closeSheet}}" style="position:absolute;inset:0;background:rgba(10,14,22,.5);animation:{{backAnim}} .2s ease both"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:24px 24px 0 0;padding:12px 20px 24px;display:flex;flex-direction:column;gap:12px;animation:{{sheetAnim}} .28s cubic-bezier(.2,.8,.2,1) both">
+<div style="width:36px;height:4px;border-radius:2px;background:var(--line);align-self:center"></div>
+<sc-if value="{{sheetUser}}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:48px;border-radius:24px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--ac)">{{su.init}}</div><div style="flex:1"><div style="font-size:17px;font-weight:800">{{su.name}}</div><div class="sub">{{su.role}} · {{su.fac}}</div></div><span class="tag" style="background:{{su.bg}};color:{{su.fg}}">{{su.status}}</span></div>
+<div class="sub">Faollik: {{su.act}} <i>(namuna)</i></div>
+<button class="{{su.btnCls}} press" onClick="{{su.toggle}}">{{su.btnLabel}}</button>
+<button class="sec press" disabled="{{roleLocked}}" onClick="{{askRole}}">Rolni boshqarish</button>
+<sc-if value="{{roleLocked}}" hint-placeholder-val="{{ false }}"><span class="sub" style="font-size:12px">Rol berish faqat Admin uchun.</span></sc-if>
+</div></sc-if>
+<sc-if value="{{sheetRej}}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:17px;font-weight:800">Rad etish sababi</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{reasons}}" as="r" hint-placeholder-count="3"><button class="chip press {{r.cls}}" onClick="{{r.tap}}">{{r.label}}</button></sc-for></div>
+<button class="dng press" disabled="{{rejOff}}" onClick="{{confirmReject}}">Rad etishni tasdiqlash</button>
+</div></sc-if>
+</div></div>
+</sc-if>
+
+<sc-if value="{{confirmOn}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;padding:28px"><div onClick="{{closeConfirm}}" style="position:absolute;inset:0;background:rgba(10,14,22,.55);animation:fade .18s ease both"></div>
+<div role="alertdialog" aria-label="{{cTitle}}" class="pop" style="position:relative;width:100%;background:var(--card);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px"><div style="font-size:17px;font-weight:800">{{cTitle}}</div><div class="sub">{{cBody}}</div>
+<div style="display:flex;gap:8px"><button class="sec press" onClick="{{closeConfirm}}">Bekor qilish</button><button class="{{cCls}} press" onClick="{{runConfirm}}">{{cLabel}}</button></div></div></div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"accent":{"editor":"color","default":"#2F5BEA"},"adminRole":{"editor":"enum","options":["Admin","Moderator"],"default":"Admin"}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state={screen:'dash',loading:true,q:'',uf:'Hammasi',vt:'mentor',pf:'Hammasi',sheet:null,closing:false,sel:null,rej:null,reason:null,confirm:null,aud:'Hammasi',msg:'',delivery:false,delStep:0,
+    users:[['u1','Aziza Karimova','AK','Talaba','Iqtisodiyot','faol','3 almashuv · 1 loyiha'],['u2','Bekzod Rahimov','BR','Mentor','Dasturlash','faol','5 sessiya · 2 loyiha'],['u3','Malika Sodiqova','MS','Talaba','Tillar','to‘xtatilgan','1 almashuv'],['u4','Sherzod Nazarov','SN','Talaba','Huquq','faol','2 almashuv']].map(u=>({id:u[0],name:u[1],init:u[2],role:u[3],fac:u[4],status:u[5],act:u[6]})),
+    ver:[['v1','mentor','Mentor tasdig‘i','Bekzod Rahimov','3 ta dalil havolasi yuborilgan.'],['v2','cert','IELTS sertifikati','Aziza Karimova','Fayl: ielts.pdf'],['v3','port','Tadqiqot maqolasi','Sherzod Nazarov','Havola: maqola sahifasi'],['v4','cert','MUN ishtirok sertifikati','Malika Sodiqova','Fayl: mun.pdf']].map(v=>({id:v[0],type:v[1],title:v[2],who:v[3],note:v[4],st:'pending',reason:''})),
+    reps:[['r1','Foydalanuvchi','Haqoratli xabar','Sherzod N. → Malika S.','Chatdagi xabar skrinshoti ilova qilingan.','open'],['r2','Loyiha','Noo‘rin tavsif','IELTS klubi loyihasi','Tavsifdagi 2-band qoidalarga zid deb belgilangan.','open']].map(r=>({id:r[0],kind:r[1],title:r[2],who:r[3],ev:r[4],st:r[5]})),
+    projs:[['p1','IELTS klubi','Faol',4,5,false],['p2','Startap g‘oyalari','Yig‘ilmoqda',2,6,false],['p3','Tadqiqot guruhi','Faol',5,5,true],['p4','Dizayn sprinti','Tugallangan',4,4,false]].map(p=>({id:p[0],name:p[1],status:p[2],members:p[3],max:p[4],reported:p[5],hidden:false})),
+    set:[['reg','Yangi ro‘yxatdan o‘tish','Onboardingni yoqish/o‘chirish',true,true],['bot','Bot xabarlari','Platforma bo‘yicha yuborishga ruxsat',true,true],['ai','AI tushuntirish','Faqat Admin o‘zgartiradi',false,false]].map(s=>({id:s[0],label:s[1],hint:s[2],on:s[3],sens:s[4]})),
+    audit:[{t:'Kecha',x:'Admin: ko‘nikma katalogi yangilandi (namuna)'},{t:'Kecha',x:'Moderator: 2 dalil tasdiqlandi (namuna)'}]}; }
+  later(f,ms){ setTimeout(f,ms); }
+  go(s){ this.setState({screen:s,loading:true,sheet:null}); this.later(()=>this.setState({loading:false}),520); }
+  log(x){ this.setState({audit:[{t:'Hozir',x:this.props.adminRole+': '+x},...this.state.audit]}); }
+  ask(title,body,label,danger,fn){ this.pend=fn; this.setState({confirm:{title,body,label,danger}}); }
+  closeS(){ this.setState({closing:true}); this.later(()=>this.setState({sheet:null,closing:false}),200); }
+  renderVals(){
+    const s=this.state, set=(o)=>this.setState(o), self=this;
+    const dark=(this.props.theme||'light')==='dark', ac=this.props.accent??'#2F5BEA', isAdmin=(this.props.adminRole||'Admin')==='Admin';
+    const rootVars=(dark?'--bg:#0F1218;--card:#181C24;--ink:#F2F4F7;--sub:#98A2B3;--line:#262B35;--soft:#1F242E;--bad:#F97066;':'--bg:#F5F6F8;--card:#FFFFFF;--ink:#101828;--sub:#667085;--line:#E4E7EC;--soft:#EEF1F6;--bad:#B42318;')+'--ac:'+ac+';';
+    const tone={ok:['rgba(18,183,106,.15)',dark?'#47CD89':'#067647'],warn:['rgba(247,144,9,.16)',dark?'#FEC84B':'#B54708'],bad:['rgba(217,45,32,.14)',dark?'#F97066':'#B42318'],mute:['var(--soft)','var(--sub)']};
+    const fl=(arr,cur,key)=>arr.map(l=>({label:l,cls:cur===l?'on':'',tap:()=>set({[key]:l})}));
+    const pendV=s.ver.filter(v=>v.st==='pending').length, openR=s.reps.filter(r=>r.st==='open').length;
+    const scr=s.screen, sub=['proj','ann','set'].includes(scr), nm={dash:'Boshqaruv',users:'Foydalanuvchilar',verify:'Tasdiqlash',reports:'Shikoyatlar',more:'Yana',proj:'Loyihalar',ann:'E‘lonlar',set:'Sozlamalar va audit'};
+    const navKey=sub?'more':scr, tabsD=[['dash','Panel'],['users','Foydalanuvchi'],['verify','Tasdiq'],['reports','Shikoyat'],['more','Yana']];
+    const stats=[['Talabalar','1 248','var(--ink)'],['Faol foydalanuvchi','412','var(--ink)'],['Faol mentor','37','var(--ink)'],['Skill exchange','186','var(--ink)'],['Faol loyiha','23','var(--ink)'],['Tasdiq kutmoqda',String(pendV),'var(--ac)'],['Diqqat talab shikoyat',String(openR),openR?tone.bad[1]:'var(--ink)'],['Rol: '+this.props.adminRole,'—','var(--sub)']].map((a,i)=>({i,l:a[0],v:a[1],color:a[2]})).slice(0,7);
+    const bars=[40,62,50,78,66,30,22].map((h,i)=>({i,h:h+'%',o:i<5?1:.5,d:['Du','Se','Ch','Pa','Ju','Sh','Ya'][i]}));
+    const ust=u=>u.status==='faol'?tone.ok:tone.bad;
+    const users=s.users.filter(u=>(s.uf==='Hammasi'||(s.uf==='To‘xtatilgan'?u.status!=='faol':u.role===s.uf))&&u.name.toLowerCase().includes(s.q.toLowerCase())).map((u,i)=>({...u,i,bg:ust(u)[0],fg:ust(u)[1],open:()=>set({sheet:'user',sel:u.id})}));
+    const su0=s.users.find(u=>u.id===s.sel)||s.users[0], susp=su0.status==='faol';
+    const su={...su0,bg:ust(su0)[0],fg:ust(su0)[1],btnCls:susp?'dng':'pri',btnLabel:susp?'Hisobni to‘xtatish':'Hisobni tiklash',toggle:()=>this.ask(susp?'Hisobni to‘xtatish?':'Hisobni tiklash?',su0.name+(susp?' tizimga kira olmaydi.':' yana tizimdan foydalanadi.'),susp?'To‘xtatish':'Tiklash',susp,()=>{set({users:s.users.map(u=>u.id===su0.id?{...u,status:susp?'to‘xtatilgan':'faol'}:u)});this.log(su0.name+' '+(susp?'to‘xtatildi':'tiklandi'));})};
+    const vLabels=[['mentor','Mentor'],['cert','Sertifikat'],['port','Portfolio'],['hist','Tarix']];
+    const vItems=s.ver.filter(v=>s.vt==='hist'?v.st!=='pending':(v.st==='pending'&&v.type===s.vt)).map((v,i)=>{const t=v.st==='approved'?tone.ok:tone.bad;return {...v,i,pending:v.st==='pending',decided:v.st!=='pending',reasonShow:v.st==='rejected',stateLabel:v.st==='approved'?'Tasdiqlandi':'Rad etildi',bg:t[0],fg:t[1],
+      approve:()=>this.ask('Tasdiqlansinmi?',v.title+' — '+v.who,'Tasdiqlash',false,()=>{set({ver:s.ver.map(x=>x.id===v.id?{...x,st:'approved'}:x)});this.log(v.title+' tasdiqlandi');}),reject:()=>set({sheet:'rej',rej:v.id,reason:null})};});
+    const reasons=['Hujjat o‘qilmaydi','Dalil yetarli emas','Ma‘lumot mos emas'].map(l=>({label:l,cls:s.reason===l?'on':'',tap:()=>set({reason:l})}));
+    const rst={open:['Ochiq',tone.warn],hal:['Hal qilindi',tone.ok],rad:['Rad etildi',tone.mute]};
+    const reports=s.reps.map((r,i)=>({...r,i,open:r.st==='open',stateLabel:rst[r.st][0],bg:rst[r.st][1][0],fg:rst[r.st][1][1],
+      resolve:()=>this.ask('Hal qilindi deb belgilansinmi?',r.title,'Hal qilish',false,()=>{set({reps:s.reps.map(x=>x.id===r.id?{...x,st:'hal'}:x)});this.log('shikoyat hal qilindi: '+r.title);}),
+      dismiss:()=>this.ask('Shikoyat rad etilsinmi?','Ushbu amal jurnalga yoziladi.','Rad etish',false,()=>{set({reps:s.reps.map(x=>x.id===r.id?{...x,st:'rad'}:x)});this.log('shikoyat rad etildi: '+r.title);}),
+      remove:()=>this.ask('Kontent olib tashlansinmi?','Bu amalni qaytarib bo‘lmaydi. Backend tasdiqlashi kerak.','Olib tashlash',true,()=>{set({reps:s.reps.map(x=>x.id===r.id?{...x,st:'hal'}:x)});this.log('kontent olib tashlandi: '+r.title);})}));
+    const pst={'Faol':tone.ok,'Yig‘ilmoqda':tone.warn,'Tugallangan':tone.mute};
+    const projects=s.projs.filter(p=>s.pf==='Hammasi'||(s.pf==='Shikoyatli'?p.reported&&!p.hidden:p.status===s.pf)).map((p,i)=>({...p,i,fill:p.members/p.max,bg:pst[p.status][0],fg:pst[p.status][1],canMod:p.reported&&!p.hidden,
+      hide:()=>this.ask('Kontent yashirilsinmi?',p.name+' loyihasi ro‘yxatdan yashiriladi.','Yashirish',true,()=>{set({projs:s.projs.map(x=>x.id===p.id?{...x,hidden:true}:x)});this.log('loyiha yashirildi: '+p.name);})}));
+    const aud=['Hammasi','Talabalar','Mentorlar'];
+    const settings=s.set.map((x,i)=>({...x,i,locked:x.sens===false&&!isAdmin,bg:x.on?'var(--ac)':'var(--line)',x:x.on?'18px':'0px',
+      tap:()=>this.ask('Sozlama o‘zgartirilsinmi?',x.label+' holati almashtiriladi.','O‘zgartirish',false,()=>{set({set:s.set.map(y=>y.id===x.id?{...y,on:!y.on}:y)});this.log(x.label+' '+(x.on?'o‘chirildi':'yoqildi'));})}));
+    const delL=['Navbatda','Yuborilmoqda','Yetkazildi'];
+    const c=s.confirm||{};
+    return { rootVars, title:nm[scr], isSub:sub, roleLabel:this.props.adminRole, goMore:()=>this.go('more'), loading:s.loading, skels:[1,2,3,4],
+      showDash:!s.loading&&scr==='dash', showUsers:!s.loading&&scr==='users', showVerify:!s.loading&&scr==='verify', showReports:!s.loading&&scr==='reports', showMore:!s.loading&&scr==='more', showProj:!s.loading&&scr==='proj', showAnn:!s.loading&&scr==='ann', showSet:!s.loading&&scr==='set',
+      stats, bars, auditShort:s.audit.slice(0,3), q:s.q, onQ:e=>set({q:e.target.value}), userFilters:fl(['Hammasi','Talaba','Mentor','To‘xtatilgan'],s.uf,'uf'), users, noUsers:users.length===0,
+      vTabs:fl(vLabels.map(v=>v[1]),(vLabels.find(v=>v[0]===s.vt)||[])[1],'vt').map((f,i)=>({...f,tap:()=>set({vt:vLabels[i][0]})})), vItems, noV:vItems.length===0, noVText:s.vt==='hist'?'Tarix hozircha bo‘sh.':'Bu bo‘limda kutilayotgan so‘rov yo‘q.',
+      reports, noRep:reports.length===0, moreItems:[['proj','Loyihalar','Holat bo‘yicha ko‘rish va moderatsiya'],['ann','E‘lonlar','Xabar yozish va auditoriyani tanlash'],['set','Sozlamalar va audit','Platforma sozlamalari, amallar tarixi']].map((m,i)=>({i,label:m[1],hint:m[2],tap:()=>this.go(m[0])})),
+      pFilters:fl(['Hammasi','Faol','Yig‘ilmoqda','Shikoyatli'],s.pf,'pf'), projects, noProj:projects.length===0,
+      audiences:aud.map(l=>({label:l,cls:s.aud===l?'on':'',tap:()=>set({aud:l})})), msg:s.msg, onMsg:e=>set({msg:e.target.value}), preview:s.msg||'Xabar matni shu yerda ko‘rinadi.', annOff:s.msg.trim().length<5,
+      askSend:()=>this.ask('E‘lon yuborilsinmi?','Auditoriya: '+s.aud+'. Yuborilgach qaytarib bo‘lmaydi.','Yuborish',false,()=>{set({delivery:true,delStep:0});this.log('e‘lon yuborildi: '+s.aud);this.later(()=>set({delStep:1}),700);this.later(()=>set({delStep:2}),1500);}),
+      delivery:s.delivery, delLabel:delL[s.delStep], delFill:(s.delStep+1)/3, settings, audit:s.audit,
+      navShift:(tabsD.findIndex(t=>t[0]===navKey)*100)+'%', tabs:tabsD.map(t=>({label:t[1],color:t[0]===navKey?'var(--ink)':'var(--sub)',badge:(t[0]==='verify'&&pendV>0)||(t[0]==='reports'&&openR>0),n:t[0]==='verify'?pendV:openR,tap:()=>this.go(t[0])})),
+      sheetOn:!!s.sheet, sheetUser:s.sheet==='user', sheetRej:s.sheet==='rej', su, roleLocked:!isAdmin, sheetAnim:s.closing?'sheetDown':'sheetUp', backAnim:s.closing?'fadeOut':'fade', closeSheet:()=>this.closeS(),
+      askRole:()=>this.ask('Rolni boshqarish','Rol faqat serverda, vakolatli ish jarayoni orqali beriladi. Bu prototipda amal bajarilmaydi.','Tushunarli',false,()=>{}),
+      reasons, rejOff:!s.reason, confirmReject:()=>{const v=s.ver.find(x=>x.id===s.rej);set({ver:s.ver.map(x=>x.id===s.rej?{...x,st:'rejected',reason:s.reason}:x)});this.log(v.title+' rad etildi');this.closeS();},
+      confirmOn:!!s.confirm, cTitle:c.title, cBody:c.body, cLabel:c.label, cCls:c.danger?'dng':'pri', closeConfirm:()=>set({confirm:null}), runConfirm:()=>{const f=this.pend;set({confirm:null});if(f)f();} };
+  }
+}
+</script>
+</body>
+</html>

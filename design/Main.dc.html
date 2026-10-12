@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>UWED Talent Network Mini App</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif}
+button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.press{transition:transform .14s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,opacity .2s}
+.press:active{transform:scale(.96)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheetDown{from{transform:none}to{transform:translateY(100%)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.in{animation:rise .28s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*50ms)}
+.pop{animation:pop .3s cubic-bezier(.34,1.56,.64,1) both;animation-delay:calc(var(--i,0)*50ms)}
+.slide{animation:slideIn .26s cubic-bezier(.2,.8,.2,1) both}
+.sk{position:relative;overflow:hidden;background:var(--soft);border-radius:8px}
+.sk:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--line),transparent);animation:shimmer 1.2s linear infinite}
+.bar{transform-origin:left;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.chip{height:36px;padding:0 14px;border-radius:18px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.pri{height:48px;border-radius:14px;background:var(--ac);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.sec{height:48px;border-radius:14px;background:var(--soft);color:var(--ink);font-size:15px;font-weight:700;width:100%}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important}}
+</style>
+</helmet>
+<div style="{{rootVars}}width:390px;height:844px;box-sizing:border-box;position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);color:var(--ink)">
+
+<sc-if value="{{isOnb}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;padding:28px 20px 24px;gap:20px;min-height:0">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="flex:1;height:4px;border-radius:2px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{stepFill}})"></div></div>
+<span style="font-size:12px;font-weight:600;color:var(--sub)">{{stepLabel}}</span>
+</div>
+<div class="slide" style="flex:1;display:flex;flex-direction:column;gap:18px;overflow-y:auto;min-height:0">
+<sc-if value="{{step0}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:18px">
+<h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em">Xush kelibsiz.<br>Avval o‘zingiz haqingizda.</h1>
+<p style="margin:0;font-size:15px;line-height:1.5;color:var(--sub)">Yo‘nalishingizni tanlang — mos sheriklarni shunga qarab topamiz.</p>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{dirs}}" as="d" hint-placeholder-count="4"><button class="chip press {{d.cls}}" onClick="{{d.tap}}">{{d.label}}</button></sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{step1}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em">Nimani almashasiz?</h1>
+<div style="font-size:13px;font-weight:700;color:var(--sub)">O‘RGATAMAN</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{teachChips}}" as="c" hint-placeholder-count="6"><button class="chip press {{c.cls}}" onClick="{{c.tap}}">{{c.label}}</button></sc-for>
+</div>
+<div style="font-size:13px;font-weight:700;color:var(--sub);margin-top:6px">O‘RGANMOQCHIMAN</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{learnChips}}" as="c" hint-placeholder-count="6"><button class="chip press {{c.cls}}" onClick="{{c.tap}}">{{c.label}}</button></sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{step2}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em">Deyarli tayyor.</h1>
+<p style="margin:0;font-size:15px;line-height:1.5;color:var(--sub)">Bo‘sh vaqtingizni kalendarda belgilaysiz. Profilingiz moderator tasdiqlagunga qadar belgisiz ko‘rinadi.</p>
+<div class="card pop" style="padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--sub)">Tanlangan</span><span style="font-size:15px;font-weight:700">{{summary}}</span></div>
+</div>
+</sc-if>
+</div>
+<div style="display:flex;gap:10px">
+<sc-if value="{{canBack}}" hint-placeholder-val="{{ false }}"><button class="sec press" style="width:96px" onClick="{{prevStep}}">Orqaga</button></sc-if>
+<button class="pri press" onClick="{{nextStep}}">{{nextLabel}}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isMain}}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;overflow-y:auto;min-height:0;padding:20px 20px 12px;display:flex;flex-direction:column;gap:16px">
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div class="in" style="display:flex;align-items:center;justify-content:space-between"><h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Mos sheriklar</h1>
+<button class="press" aria-label="Qayta qidirish" onClick="{{reload}}" style="width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>
+<sc-if value="{{loading}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font-size:13px;color:var(--sub)">Ko‘nikma va bo‘sh vaqt bo‘yicha hisoblanmoqda…</span>
+<sc-for list="{{skeletons}}" as="k" hint-placeholder-count="3"><div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;gap:12px"><div class="sk" style="width:44px;height:44px;border-radius:22px"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="sk" style="height:14px;width:50%"></div><div class="sk" style="height:12px;width:80%"></div></div></div><div class="sk" style="height:6px"></div></div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{showMatches}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{matches}}" as="m" hint-placeholder-count="3">
+<div class="card in" style="--i:{{m.i}};padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--ac)">{{m.init}}</div>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">{{m.name}}</div><div style="font-size:13px;color:var(--sub)">{{m.dir}}</div></div>
+<div style="font-size:18px;font-weight:800;color:var(--ac)">{{m.pct}}%</div>
+</div>
+<div style="height:6px;border-radius:3px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{m.fill}})"></div></div>
+<div style="font-size:13px;line-height:1.45;color:var(--sub)">{{m.why}}</div>
+<sc-if value="{{m.sent}}" hint-placeholder-val="{{ false }}"><div class="pop" style="height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;color:var(--ac)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>So‘rov yuborildi</div></sc-if>
+<sc-if value="{{m.canSend}}" hint-placeholder-val="{{ true }}"><button class="pri press" style="height:44px" onClick="{{m.open}}">Taklif yuborish</button></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{isEx}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<h1 class="in" style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Skill Exchange</h1>
+<div class="card in" style="--i:1;padding:18px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--ac)">AK</div><div style="flex:1"><div style="font-size:15px;font-weight:700">Aziza K.</div><div style="font-size:13px;color:var(--sub)">Figma ⇄ Python</div></div></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="height:4px;border-radius:2px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{exFill}})"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700">
+<sc-for list="{{exSteps}}" as="s" hint-placeholder-count="3"><span style="color:{{s.color}};transition:color .3s">{{s.label}}</span></sc-for>
+</div></div>
+<button class="pri press" onClick="{{advance}}">{{advLabel}}</button>
+</div>
+<sc-if value="{{exDone}}" hint-placeholder-val="{{ false }}"><div class="card pop" style="padding:16px;font-size:14px;line-height:1.45;color:var(--sub)">Sessiya ikki tomon roziligi bilan belgilandi. Yakunlangach baho qoldirish ochiladi.</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{isCal}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<h1 class="in" style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Bo‘sh vaqt</h1>
+<div class="card in" style="--i:1;padding:14px;display:flex;flex-direction:column;gap:6px">
+<div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));gap:4px;font-size:11px;font-weight:700;color:var(--sub);text-align:center"><span></span><span>Du</span><span>Se</span><span>Ch</span><span>Pa</span><span>Ju</span><span>Sh</span><span>Ya</span></div>
+<sc-for list="{{calRows}}" as="r" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));gap:4px;align-items:center"><span style="font-size:11px;font-weight:600;color:var(--sub)">{{r.label}}</span>
+<sc-for list="{{r.cells}}" as="c" hint-placeholder-count="7"><button class="press" aria-label="{{c.aria}}" aria-pressed="{{c.on}}" onClick="{{c.tap}}" style="height:44px;border-radius:10px;background:{{c.bg}};border:1px solid {{c.bd}};position:relative;transition:background-color .2s,border-color .2s">
+<sc-if value="{{c.match}}" hint-placeholder-val="{{ false }}"><span class="pop" style="position:absolute;top:50%;left:50%;margin:-4px 0 0 -4px;width:8px;height:8px;border-radius:4px;background:#fff"></span></sc-if></button></sc-for></div>
+</sc-for>
+</div>
+<div class="card in" style="--i:2;padding:16px;display:flex;align-items:center;gap:14px"><div key="{{matchCount}}" class="pop" style="font-size:28px;font-weight:800;color:var(--ac);min-width:36px">{{matchCount}}</div><div style="font-size:14px;line-height:1.4;color:var(--sub)">ta vaqt Aziza bilan mos keladi. Mos vaqtlar nuqta bilan belgilangan.</div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{isPort}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<h1 class="in" style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Portfolio</h1>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<sc-for list="{{badges}}" as="b" hint-placeholder-count="4">
+<div class="card pop" style="--i:{{b.i}};padding:16px;display:flex;flex-direction:column;gap:10px;min-height:128px">
+<div style="width:40px;height:40px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--ac)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L7 21l5-3 5 3-1.500-7.500"/></svg></div>
+<div style="font-size:14px;font-weight:700;line-height:1.3">{{b.title}}</div>
+<div style="font-size:12px;font-weight:600;color:{{b.color}}">{{b.status}}</div>
+</div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isProj}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<h1 class="in" style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Loyihalar</h1>
+<sc-if value="{{invPending}}" hint-placeholder-val="{{ true }}">
+<div class="card in" style="--i:1;padding:18px;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:12px;font-weight:700;color:var(--ac)">YANGI TAKLIF</span>
+<div style="font-size:17px;font-weight:800">Talabalar uchun IELTS klubi</div>
+<div style="font-size:13px;line-height:1.45;color:var(--sub)">Rol: Speaking mentor. Jamoa limiti 5 kishi.</div>
+<div style="display:flex;gap:10px"><button class="sec press" style="height:44px" onClick="{{decline}}">Rad etish</button><button class="pri press" style="height:44px" onClick="{{accept}}">Qabul qilish</button></div>
+</div>
+</sc-if>
+<sc-if value="{{invDeclined}}" hint-placeholder-val="{{ false }}"><div class="card pop" style="padding:16px;font-size:14px;color:var(--sub)">Taklif rad etildi.</div></sc-if>
+<div class="card in" style="--i:2;padding:18px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:17px;font-weight:800">Jamoa</div><span style="font-size:12px;font-weight:700;color:var(--sub)">{{teamCount}} / 5</span></div>
+<div style="display:flex">
+<sc-for list="{{team}}" as="t" hint-placeholder-count="3"><div class="pop" style="width:44px;height:44px;border-radius:22px;margin-left:{{t.ml}};background:var(--soft);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ac);box-sizing:border-box">{{t.init}}</div></sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="position:relative;display:flex;margin:0 12px 12px;padding:4px;border-radius:20px;background:var(--card);border:1px solid var(--line)">
+<div style="position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 5);border-radius:16px;background:var(--soft);transform:translateX({{navShift}});transition:transform .32s cubic-bezier(.34,1.3,.64,1)"></div>
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5"><button class="press" aria-label="{{t.label}}" onClick="{{t.tap}}" style="position:relative;flex:1;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:700;color:{{t.color}}"><span style="font-size:10px">{{t.label}}</span></button></sc-for>
+</div>
+
+<sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:5">
+<div onClick="{{closeSheet}}" style="position:absolute;inset:0;background:rgba(10,14,22,.5);animation:{{backAnim}} .2s ease both"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:24px 24px 0 0;padding:12px 20px 24px;display:flex;flex-direction:column;gap:14px;animation:{{sheetAnim}} .28s cubic-bezier(.2,.8,.2,1) both">
+<div style="width:36px;height:4px;border-radius:2px;background:var(--line);align-self:center"></div>
+<div style="font-size:18px;font-weight:800">{{sheetName}}ga taklif</div>
+<div style="font-size:14px;line-height:1.5;color:var(--sub)">{{sheetWhy}}</div>
+<button class="pri press" onClick="{{sendReq}}"><sc-if value="{{sending}}" hint-placeholder-val="{{ false }}"><span class="spin"></span></sc-if>{{sendLabel}}</button>
+<button class="sec press" onClick="{{closeSheet}}">Bekor qilish</button>
+</div>
+</div>
+</sc-if>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"accent":{"editor":"color","default":"#2F5BEA"}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state={screen:'onb',step:0,dir:'Dasturlash',teach:{Figma:true},learn:{Python:true},loading:false,sheet:null,closing:false,sending:false,sent:{},exStep:0,slots:{'1-1':true,'3-2':true},inv:'pending',team:2}; }
+  componentDidMount(){ this.t=[]; }
+  later(f,ms){ setTimeout(f,ms); }
+  load(){ this.setState({loading:true}); this.later(()=>this.setState({loading:false}),1100); }
+  renderVals(){
+    const s=this.state, set=(o)=>this.setState(o);
+    const dark=(this.props.theme||'light')==='dark', ac=this.props.accent??'#2F5BEA';
+    const rootVars=dark?`--bg:#0F1218;--card:#181C24;--ink:#F2F4F7;--sub:#98A2B3;--line:#262B35;--soft:#1F242E;--ac:${ac};`:`--bg:#F5F6F8;--card:#FFFFFF;--ink:#101828;--sub:#667085;--line:#E4E7EC;--soft:#EEF1F6;--ac:${ac};`;
+    const skills=['Python','IELTS','Figma','MUN','Matematika','Notiq'];
+    const chips=(map,key)=>skills.map(l=>({label:l,cls:map[l]?'on':'',tap:()=>set({[key]:{...map,[l]:!map[l]}})}));
+    const dirs=['Dasturlash','Iqtisodiyot','Huquq','Tillar'].map(l=>({label:l,cls:s.dir===l?'on':'',tap:()=>set({dir:l})}));
+    const names=(m)=>Object.keys(m).filter(k=>m[k]).join(', ')||'—';
+    const last=s.step===2;
+    const finish=()=>{set({screen:'home',step:0}); this.load();};
+    const tabsDef=[['home','Bosh'],['ex','Almashuv'],['cal','Vaqt'],['port','Portfolio'],['proj','Loyiha']];
+    const idx=Math.max(0,tabsDef.findIndex(t=>t[0]===s.screen));
+    const mdata=[['m1','Aziza K.','AK',86,'Iqtisodiyot','Siz Python o‘rgatasiz, u Figma o‘rgatadi. Ikki bo‘sh vaqt mos.'],['m2','Bekzod R.','BR',74,'Dasturlash','Ikkalangiz ham IELTS o‘rganmoqchisiz. Bir yo‘nalish.'],['m3','Malika S.','MS',68,'Tillar','U MUN bo‘yicha mentor, siz Notiq o‘rganmoqchisiz.']];
+    const matches=mdata.map((m,i)=>({i,id:m[0],name:m[1],init:m[2],pct:m[3],fill:s.loading?0:m[3]/100,dir:m[4],why:m[5],sent:!!s.sent[m[0]],canSend:!s.sent[m[0]],open:()=>set({sheet:m[0]})}));
+    const sh=mdata.find(m=>m[0]===s.sheet)||mdata[0];
+    const exL=['Yuborildi','Qabul','Belgilandi'];
+    const days=['Ertalab','Kunduzi','Kechqurun'], partner={'1-1':1,'3-2':1,'4-1':1,'5-0':1};
+    const calRows=days.map((d,r)=>({label:d,cells:[0,1,2,3,4,5,6].map(c=>{const id=c+'-'+r,on=!!s.slots[id],mt=on&&!!partner[id];return {on,match:mt,aria:'Kun '+(c+1)+', '+d,bg:on?'var(--ac)':'var(--soft)',bd:partner[id]&&!on?'var(--ac)':'transparent',tap:()=>set({slots:{...s.slots,[id]:!on}})};})}));
+    const mc=calRows.reduce((a,r)=>a+r.cells.filter(c=>c.match).length,0);
+    const bd=[['IELTS 7.5','Tasdiqlangan'],['MUN ishtirokchisi','Tasdiqlangan'],['Figma mentori','Tasdiqlangan'],['Tadqiqot maqolasi','Tekshiruvda']];
+    const teamI=['SM','AK','BR'].slice(0,s.team);
+    return {
+      rootVars, isOnb:s.screen==='onb', isMain:s.screen!=='onb', isHome:s.screen==='home', isEx:s.screen==='ex', isCal:s.screen==='cal', isPort:s.screen==='port', isProj:s.screen==='proj',
+      step0:s.step===0, step1:s.step===1, step2:last, stepFill:(s.step+1)/3, stepLabel:(s.step+1)+' / 3', canBack:s.step>0,
+      dirs, teachChips:chips(s.teach,'teach'), learnChips:chips(s.learn,'learn'),
+      summary:s.dir+' · O‘rgatadi: '+names(s.teach)+' · O‘rganadi: '+names(s.learn),
+      nextLabel:last?'Boshlash':'Davom etish', nextStep:()=>last?finish():set({step:s.step+1}), prevStep:()=>set({step:Math.max(0,s.step-1)}),
+      loading:s.loading, showMatches:!s.loading, skeletons:[1,2,3], matches, reload:()=>{set({sent:{}});this.load();},
+      sheetOpen:!!s.sheet, sheetName:sh[1], sheetWhy:sh[5], sending:s.sending, sendLabel:s.sending?'Yuborilmoqda':'Yuborish',
+      sheetAnim:s.closing?'sheetDown':'sheetUp', backAnim:s.closing?'fadeOut':'fade',
+      closeSheet:()=>{set({closing:true});this.later(()=>set({sheet:null,closing:false}),200);},
+      sendReq:()=>{ if(s.sending) return; set({sending:true}); this.later(()=>{set({sending:false,closing:true,sent:{...this.state.sent,[s.sheet]:true}});this.later(()=>set({sheet:null,closing:false}),200);},700); },
+      exFill:s.exStep/2, exSteps:exL.map((l,i)=>({label:l,color:i<=s.exStep?'var(--ac)':'var(--sub)'})), exDone:s.exStep===2,
+      advLabel:s.exStep===0?'Aziza qabul qildi (demo)':s.exStep===1?'Vaqtni tasdiqlash':'Qayta boshlash', advance:()=>set({exStep:(s.exStep+1)%3}),
+      calRows, matchCount:mc,
+      badges:bd.map((b,i)=>({i,title:b[0],status:b[1],color:i<3?'var(--ac)':'var(--sub)'})),
+      invPending:s.inv==='pending', invDeclined:s.inv==='declined', accept:()=>set({inv:'accepted',team:3}), decline:()=>set({inv:'declined'}),
+      team:teamI.map((t,i)=>({init:t,ml:i?'-10px':'0'})), teamCount:s.team,
+      navShift:(idx*100)+'%',
+      tabs:tabsDef.map((t,i)=>({label:t[1],color:i===idx?'var(--ink)':'var(--sub)',tap:()=>{ if(t[0]==='home'&&s.screen!=='home') this.load(); set({screen:t[0]}); }}))
+    };
+  }
+}
+</script>
+</body>
+</html>
