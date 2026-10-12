@@ -20,7 +20,7 @@ function publicProfile(r) { return { id: r.id, display_name: r.display_name, rol
 async function profile(db, id) {
   const p = await row(db, 'SELECT u.*,p.faculty,p.bio,p.timezone,p.interests,p.languages,p.privacy,p.notify_bot,p.ai_consent FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?', id);
   if (!p) return null;
-  const skills = await all(db, 'SELECT s.name,us.direction FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=?', id);
+  const skills = await all(db, 'SELECT s.name,us.direction FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=? AND s.approved=1', id);
   p.teach = JSON.stringify(skills.filter(x => x.direction === 'teach').map(x => x.name));
   p.learn = JSON.stringify(skills.filter(x => x.direction === 'learn').map(x => x.name));
   return publicProfile(p);
@@ -113,8 +113,8 @@ async function api(request, env, path, method) {
       skill=await row(env.DB,'SELECT id,approved FROM skills WHERE name=?',name);
     }
     // New skills require moderation. Only approved skills can enter matching.
-    if (!skill.approved) return json({ pending: true, message:'Ko‘nikma tasdiqlashga yuborildi' },202);
     await run(env.DB,'INSERT OR IGNORE INTO user_skills(user_id,skill_id,direction) VALUES(?,?,?)',me.id,skill.id,b.direction);
+    if (!skill.approved) return json({ pending: true, message:'Ko‘nikma tasdiqlashga yuborildi' },202);
     return json({ ok:true },201);
   }
   if (path === 'availability' && method === 'GET') return json({ items:await all(env.DB,'SELECT id,weekday,start_minute,end_minute FROM availability WHERE user_id=?',me.id) });
@@ -329,7 +329,7 @@ async function webhook(request, env) {
     if (match && Number.isSafeInteger(callback.from?.id)) {
       const user=await row(env.DB,'SELECT * FROM users WHERE telegram_user_id=?',String(callback.from.id));
       const r=await row(env.DB,'SELECT * FROM exchange_requests WHERE id=?',match[2]);
-      if (user && r && r.recipient_id===user.id && r.status==='sent' && Date.now()-Date.parse(r.created_at.replace(' ','T')+'Z')<48*3600000) {
+      if (user && !user.suspended_at && r && r.recipient_id===user.id && r.status==='sent' && Date.now()-Date.parse(r.created_at.replace(' ','T')+'Z')<48*3600000) {
         try { await changeExchange(env.DB,r,match[1],user);answer=match[1]==='accept'?'Taklif qabul qilindi':'Taklif rad etildi'; } catch { answer='So‘rov allaqachon o‘zgargan'; }
       }
     }
