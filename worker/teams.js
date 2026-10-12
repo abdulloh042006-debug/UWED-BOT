@@ -1,4 +1,5 @@
 import { cleanText, randomId } from './core.js';
+import { adminTier, isTopAdmin, protectedTier } from './admin-access.js';
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const fail=(s,c,m)=>json({error:{code:c,message:m}},s);
 const one=(db,q,...p)=>db.prepare(q).bind(...p).first();
@@ -143,7 +144,8 @@ export async function teams(request,env,path,method,me){
     await run(db,'INSERT INTO audit_log(id,actor_id,action,object_type,object_id) VALUES(?,?,?,?,?)',randomId(),me.id,b.decision,'report',report[1]);return json({ok:true});
   }
   if(path==='admin/roles'&&method==='POST'){
-    if(me.role!=='admin')return fail(403,'role','Ruxsat yo‘q');const b=await request.json();if(!['student','mentor','moderator','admin'].includes(b.role)||b.user_id===me.id)return fail(400,'input','Rolni tekshiring');
+    if(!isTopAdmin(adminTier(me,env)))return fail(403,'role','Faqat bosh admin rol tayinlaydi');const b=await request.json();if(!['student','mentor','moderator','admin'].includes(b.role)||b.user_id===me.id)return fail(400,'input','Rolni tekshiring');
+    const target=await one(db,'SELECT telegram_user_id FROM users WHERE id=?',b.user_id);if(target&&protectedTier(target.telegram_user_id,env))return fail(403,'protected','Bosh admin hisobini o‘zgartirib bo‘lmaydi');
     const changed=await run(db,'UPDATE users SET role=? WHERE id=?',b.role,b.user_id);if(!changed.meta?.changes)return fail(404,'user','Foydalanuvchi topilmadi');
     await run(db,'INSERT INTO audit_log(id,actor_id,action,object_type,object_id) VALUES(?,?,?,?,?)',randomId(),me.id,'role:'+b.role,'user',b.user_id);return json({ok:true});
   }
