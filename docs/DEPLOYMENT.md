@@ -17,3 +17,18 @@ No deployment has been authorized or performed. Do not use the current manifest 
 - Before pilot, exercise D1 export and R2 object backup, restore them into a disposable environment, compare row/object counts and access permissions, and document retention and deletion. No backup/restore command is claimed verified yet.
 - Student data minimization: no mandatory phone/email. Evidence files are private, 10 MB maximum and PDF/JPEG/PNG signature checked. Malware scanning and university evidence rules require an operational decision before live upload.
 - Assess Sites beta quotas, D1/R2 limits, regional storage constraints, cost, and failure recovery with 50–100 test accounts. If a required capability fails, document the blocker and seek approval before selecting Option B or any paid/external provider.
+
+## Telegram @uwedrobot launch setup (after hosted deployment)
+
+**Do not run setup until the public HTTPS Mini App, D1 migrations and server secrets work.** The script refuses to change the bot if the Mini App shell is not HTTP 200 or the unsigned API probe is not HTTP 401.
+
+- Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `SESSION_SECRET`, `BOOTSTRAP_ADMIN_TELEGRAM_ID` and `MINIAPP_URL` as runtime secrets on the host. Keep configuration out of Git/chat/logs.
+- In a secured deployment shell, provide `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `MINIAPP_URL` as environment variables.
+- Check configuration offline using `npm run bot:setup` (does not call Telegram).
+- Execute `npm run bot:setup -- --apply` **only when live setup is authorized**. It probes the hosted application and API before calling Telegram. This installs name, description, short description, command list, Mini App menu button and webhook with a secret token.
+- The script checks that the token belongs to `@uwedrobot`; it does not configure another bot.
+- Test `/start` in Telegram after setup and check hosted D1 persistence plus real `initData`; successful setup alone is **not** a real-device pass.
+- Bot avatar/photo must be set separately through BotFather or verified image upload; this script does not upload an image.
+- If no public URL / D1 binding exists, stop. Do not claim the bot is live.
+
+The current `.openai/hosting.json` deliberately has `d1: null` and `r2: null` until ChatGPT Sites bindings and migration steps are verified. Do not replace them with invented IDs.
