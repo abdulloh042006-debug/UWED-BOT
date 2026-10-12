@@ -6,7 +6,7 @@ export function page() {
 }
 export const client = iconsClient + adminClient + `
 const root=document.querySelector('#app'), tg=window.Telegram?.WebApp;
-document.documentElement.dataset.theme=tg?.colorScheme==='dark'?'dark':'light';
+if(document.documentElement?.dataset) document.documentElement.dataset.theme=tg?.colorScheme==='dark'?'dark':'light';
 let matchQuery='', me=null, view=['home','profile','matches','sessions','projects','portfolio'].includes(new URLSearchParams(location.search).get('screen'))?new URLSearchParams(location.search).get('screen'):'home';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const humanLabels={sent:'Yuborilgan',accepted:'Qabul qilingan',rejected:'Rad etilgan',scheduled:'Rejalashtirilgan',completed:'Yakunlangan',cancelled:'Bekor qilingan',proposed:'Taklif qilingan',confirmed:'Tasdiqlangan',pending:'Tekshiruvda',verified:'Tasdiqlangan',recruiting:'Jamoa yig‘ilmoqda',active:'Faol',certificate:'Sertifikat',research:'Tadqiqot',mun:'MUN',ielts:'IELTS',project:'Loyiha',other:'Boshqa'};
