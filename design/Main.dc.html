@@ -44,7 +44,7 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 <sc-if value="{{isOnb}}" hint-placeholder-val="{{ false }}">
 <div style="flex:1;display:flex;flex-direction:column;padding:28px 20px 24px;gap:20px;min-height:0">
 <div style="display:flex;align-items:center;gap:12px">
-<div style="flex:1;height:4px;border-radius:2px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{stepFill}})"></div></div>
+<div style="width:36px;height:36px;border-radius:18px;background:var(--hdr);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></div><div style="flex:1;height:4px;border-radius:2px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{stepFill}})"></div></div>
 <span style="font-size:12px;font-weight:600;color:var(--sub)">{{stepLabel}}</span>
 </div>
 <div class="slide" style="flex:1;display:flex;flex-direction:column;gap:18px;overflow-y:auto;min-height:0">
@@ -86,7 +86,25 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 </sc-if>
 
 <sc-if value="{{isMain}}" hint-placeholder-val="{{ true }}">
-<div style="flex:1;overflow-y:auto;min-height:0;padding:20px 20px 12px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:12px;padding:14px 20px 16px;background:var(--hdr);color:#fff;border-radius:0 0 24px 24px"><div style="width:44px;height:44px;border-radius:22px;background:#fff;color:#38567E;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:800;letter-spacing:-.01em">UWED Talent Network</div><div style="font-size:12px;opacity:.8">Bilim almashish · Mentorlik · Hamkorlik</div></div><button class="press" aria-label="Profil" onClick="{{openProf}}" style="width:44px;height:44px;border-radius:22px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button></div>
+<div style="flex:1;overflow-y:auto;min-height:0;padding:16px 20px 12px;display:flex;flex-direction:column;gap:16px">
+
+<sc-if value="{{isProf}}" hint-placeholder-val="{{ false }}">
+<div class="slide" style="display:flex;flex-direction:column;gap:14px">
+<h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Profil</h1>
+<div class="card in" style="padding:16px;display:flex;align-items:center;gap:14px"><div style="width:56px;height:56px;border-radius:28px;background:var(--soft);color:var(--act);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:700">Telegram profilingiz</div><div style="font-size:13px;color:var(--sub)">Ism Telegramdan olinadi</div></div></div>
+<div class="card in" style="--i:1;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--sub)">Yo‘nalish</span><span style="font-size:14px;font-weight:700">{{profDir}}</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--sub)">Tasdiq</span><span style="height:24px;padding:0 10px;border-radius:12px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;background:var(--soft);color:var(--sub)">Moderator tasdig‘i kutilmoqda</span></div>
+<div style="font-size:13px;color:var(--sub)">O‘rgataman</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{teachList}}" as="c" hint-placeholder-count="2"><span class="pop" style="height:30px;padding:0 12px;border-radius:15px;background:var(--soft);font-size:12px;font-weight:600;display:inline-flex;align-items:center">{{c.label}}</span></sc-for></div>
+<div style="font-size:13px;color:var(--sub)">O‘rganmoqchiman</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{learnList}}" as="c" hint-placeholder-count="2"><span class="pop" style="height:30px;padding:0 12px;border-radius:15px;background:var(--soft);font-size:12px;font-weight:600;display:inline-flex;align-items:center">{{c.label}}</span></sc-for></div>
+<button class="sec press" style="height:44px" onClick="{{editProf}}">Profilni tahrirlash</button>
+</div>
+<div class="card in" style="--i:2;padding:6px 16px;display:flex;flex-direction:column">
+<sc-for list="{{profRows}}" as="r" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:12px;padding:8px 0"><div style="flex:1"><div style="font-size:14px;font-weight:700">{{r.label}}</div><div style="font-size:12px;color:var(--sub)">{{r.hint}}</div></div><button class="press" role="switch" aria-checked="{{r.on}}" aria-label="{{r.label}}" onClick="{{r.tap}}" style="width:48px;height:44px;display:flex;align-items:center"><span style="width:44px;height:26px;border-radius:13px;background:{{r.bg}};position:relative;transition:background-color .2s"><span style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;transform:translateX({{r.x}});transition:transform .22s cubic-bezier(.34,1.4,.64,1)"></span></span></button></div></sc-for>
+</div>
+</div>
+</sc-if>
 
 <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;flex-direction:column;gap:16px">
@@ -103,13 +121,13 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 <sc-for list="{{matches}}" as="m" hint-placeholder-count="3">
 <div class="card in" style="--i:{{m.i}};padding:16px;display:flex;flex-direction:column;gap:12px">
 <div style="display:flex;align-items:center;gap:12px">
-<div style="width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--ac)">{{m.init}}</div>
-<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">{{m.name}}</div><div style="font-size:13px;color:var(--sub)">{{m.dir}}</div></div>
-<div style="font-size:18px;font-weight:800;color:var(--ac)">{{m.pct}}%</div>
+<div style="width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--act)">{{m.init}}</div>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">{{m.name}}</div><div style="font-size:13px;color:var(--sub)">{{m.dir}}</div><sc-if value="{{m.verified}}" hint-placeholder-val="{{ false }}"><span style="margin-top:4px;height:20px;padding:0 8px;border-radius:10px;background:var(--bur);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center">Tasdiqlangan mentor</span></sc-if></div>
+<div style="font-size:18px;font-weight:800;color:var(--act)">{{m.pct}}%</div>
 </div>
 <div style="height:6px;border-radius:3px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{m.fill}})"></div></div>
 <div style="font-size:13px;line-height:1.45;color:var(--sub)">{{m.why}}</div>
-<sc-if value="{{m.sent}}" hint-placeholder-val="{{ false }}"><div class="pop" style="height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;color:var(--ac)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>So‘rov yuborildi</div></sc-if>
+<sc-if value="{{m.sent}}" hint-placeholder-val="{{ false }}"><div class="pop" style="height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;color:var(--act)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>So‘rov yuborildi</div></sc-if>
 <sc-if value="{{m.canSend}}" hint-placeholder-val="{{ true }}"><button class="pri press" style="height:44px" onClick="{{m.open}}">Taklif yuborish</button></sc-if>
 </div>
 </sc-for>
@@ -122,7 +140,7 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 <div style="display:flex;flex-direction:column;gap:16px">
 <h1 class="in" style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Skill Exchange</h1>
 <div class="card in" style="--i:1;padding:18px;display:flex;flex-direction:column;gap:18px">
-<div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--ac)">AK</div><div style="flex:1"><div style="font-size:15px;font-weight:700">Aziza K.</div><div style="font-size:13px;color:var(--sub)">Figma ⇄ Python</div></div></div>
+<div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--act)">AK</div><div style="flex:1"><div style="font-size:15px;font-weight:700">Aziza K.</div><div style="font-size:13px;color:var(--sub)">Figma ⇄ Python</div></div></div>
 <div style="display:flex;flex-direction:column;gap:10px">
 <div style="height:4px;border-radius:2px;background:var(--soft);overflow:hidden"><div class="bar" style="height:100%;background:var(--ac);transform:scaleX({{exFill}})"></div></div>
 <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700">
@@ -145,7 +163,7 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 <sc-if value="{{c.match}}" hint-placeholder-val="{{ false }}"><span class="pop" style="position:absolute;top:50%;left:50%;margin:-4px 0 0 -4px;width:8px;height:8px;border-radius:4px;background:#fff"></span></sc-if></button></sc-for></div>
 </sc-for>
 </div>
-<div class="card in" style="--i:2;padding:16px;display:flex;align-items:center;gap:14px"><div key="{{matchCount}}" class="pop" style="font-size:28px;font-weight:800;color:var(--ac);min-width:36px">{{matchCount}}</div><div style="font-size:14px;line-height:1.4;color:var(--sub)">ta vaqt Aziza bilan mos keladi. Mos vaqtlar nuqta bilan belgilangan.</div></div>
+<div class="card in" style="--i:2;padding:16px;display:flex;align-items:center;gap:14px"><div key="{{matchCount}}" class="pop" style="font-size:28px;font-weight:800;color:var(--act);min-width:36px">{{matchCount}}</div><div style="font-size:14px;line-height:1.4;color:var(--sub)">ta vaqt Aziza bilan mos keladi. Mos vaqtlar nuqta bilan belgilangan.</div></div>
 </div>
 </sc-if>
 
@@ -155,7 +173,7 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
 <sc-for list="{{badges}}" as="b" hint-placeholder-count="4">
 <div class="card pop" style="--i:{{b.i}};padding:16px;display:flex;flex-direction:column;gap:10px;min-height:128px">
-<div style="width:40px;height:40px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--ac)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L7 21l5-3 5 3-1.500-7.500"/></svg></div>
+<div style="width:40px;height:40px;border-radius:12px;background:{{b.ib}};display:flex;align-items:center;justify-content:center;color:{{b.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L7 21l5-3 5 3-1.500-7.500"/></svg></div>
 <div style="font-size:14px;font-weight:700;line-height:1.3">{{b.title}}</div>
 <div style="font-size:12px;font-weight:600;color:{{b.color}}">{{b.status}}</div>
 </div></sc-for>
@@ -168,7 +186,7 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 <h1 class="in" style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em">Loyihalar</h1>
 <sc-if value="{{invPending}}" hint-placeholder-val="{{ true }}">
 <div class="card in" style="--i:1;padding:18px;display:flex;flex-direction:column;gap:12px">
-<span style="font-size:12px;font-weight:700;color:var(--ac)">YANGI TAKLIF</span>
+<span style="font-size:12px;font-weight:700;color:var(--act)">YANGI TAKLIF</span>
 <div style="font-size:17px;font-weight:800">Talabalar uchun IELTS klubi</div>
 <div style="font-size:13px;line-height:1.45;color:var(--sub)">Rol: Speaking mentor. Jamoa limiti 5 kishi.</div>
 <div style="display:flex;gap:10px"><button class="sec press" style="height:44px" onClick="{{decline}}">Rad etish</button><button class="pri press" style="height:44px" onClick="{{accept}}">Qabul qilish</button></div>
@@ -178,7 +196,7 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 <div class="card in" style="--i:2;padding:18px;display:flex;flex-direction:column;gap:14px">
 <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:17px;font-weight:800">Jamoa</div><span style="font-size:12px;font-weight:700;color:var(--sub)">{{teamCount}} / 5</span></div>
 <div style="display:flex">
-<sc-for list="{{team}}" as="t" hint-placeholder-count="3"><div class="pop" style="width:44px;height:44px;border-radius:22px;margin-left:{{t.ml}};background:var(--soft);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ac);box-sizing:border-box">{{t.init}}</div></sc-for>
+<sc-for list="{{team}}" as="t" hint-placeholder-count="3"><div class="pop" style="width:44px;height:44px;border-radius:22px;margin-left:{{t.ml}};background:var(--soft);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--act);box-sizing:border-box">{{t.init}}</div></sc-for>
 </div>
 </div>
 </div>
@@ -186,7 +204,7 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 </div>
 
 <div style="position:relative;display:flex;margin:0 12px 12px;padding:4px;border-radius:20px;background:var(--card);border:1px solid var(--line)">
-<div style="position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 5);border-radius:16px;background:var(--soft);transform:translateX({{navShift}});transition:transform .32s cubic-bezier(.34,1.3,.64,1)"></div>
+<div style="position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 5);border-radius:16px;background:var(--soft);transform:translateX({{navShift}});opacity:{{navOp}};transition:transform .32s cubic-bezier(.34,1.3,.64,1),opacity .2s"></div>
 <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5"><button class="press" aria-label="{{t.label}}" onClick="{{t.tap}}" style="position:relative;flex:1;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:700;color:{{t.color}}"><span style="font-size:10px">{{t.label}}</span></button></sc-for>
 </div>
 
@@ -206,16 +224,16 @@ button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"accent":{"editor":"color","default":"#2F5BEA"}}'>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"accent":{"editor":"color","default":"#38567E"}}'>
 class Component extends DCLogic {
-  constructor(p){ super(p); this.state={screen:'onb',step:0,dir:'Dasturlash',teach:{Figma:true},learn:{Python:true},loading:false,sheet:null,closing:false,sending:false,sent:{},exStep:0,slots:{'1-1':true,'3-2':true},inv:'pending',team:2}; }
+  constructor(p){ super(p); this.state={screen:'onb',step:0,dir:'Dasturlash',teach:{Figma:true},learn:{Python:true},loading:false,sheet:null,closing:false,sending:false,sent:{},exStep:0,slots:{'1-1':true,'3-2':true},inv:'pending',team:2,notif:true,vis:true}; }
   componentDidMount(){ this.t=[]; }
   later(f,ms){ setTimeout(f,ms); }
   load(){ this.setState({loading:true}); this.later(()=>this.setState({loading:false}),1100); }
   renderVals(){
     const s=this.state, set=(o)=>this.setState(o);
-    const dark=(this.props.theme||'light')==='dark', ac=this.props.accent??'#2F5BEA';
-    const rootVars=dark?`--bg:#0F1218;--card:#181C24;--ink:#F2F4F7;--sub:#98A2B3;--line:#262B35;--soft:#1F242E;--ac:${ac};`:`--bg:#F5F6F8;--card:#FFFFFF;--ink:#101828;--sub:#667085;--line:#E4E7EC;--soft:#EEF1F6;--ac:${ac};`;
+    const dark=(this.props.theme||'light')==='dark', ac=this.props.accent??'#38567E';
+    const rootVars=(dark?'--bg:#0C1522;--card:#142033;--ink:#EEF2F7;--sub:#97A6BA;--line:#22324A;--soft:#1B2A41;--hdr:#22385A;--act:#9DB9DE;--bur:#8A0019;--gold:#D4AF37;--bad:#F0788C;':'--bg:#F5F7FA;--card:#FFFFFF;--ink:#14233A;--sub:#5B6B80;--line:#DCE3EC;--soft:#E8EEF5;--hdr:#38567E;--act:#38567E;--bur:#8A0019;--gold:#D4AF37;--bad:#8A0019;')+'--ac:'+(dark&&ac==='#38567E'?'#4A6D9C':ac)+';';
     const skills=['Python','IELTS','Figma','MUN','Matematika','Notiq'];
     const chips=(map,key)=>skills.map(l=>({label:l,cls:map[l]?'on':'',tap:()=>set({[key]:{...map,[l]:!map[l]}})}));
     const dirs=['Dasturlash','Iqtisodiyot','Huquq','Tillar'].map(l=>({label:l,cls:s.dir===l?'on':'',tap:()=>set({dir:l})}));
@@ -225,7 +243,7 @@ class Component extends DCLogic {
     const tabsDef=[['home','Bosh'],['ex','Almashuv'],['cal','Vaqt'],['port','Portfolio'],['proj','Loyiha']];
     const idx=Math.max(0,tabsDef.findIndex(t=>t[0]===s.screen));
     const mdata=[['m1','Aziza K.','AK',86,'Iqtisodiyot','Siz Python o‘rgatasiz, u Figma o‘rgatadi. Ikki bo‘sh vaqt mos.'],['m2','Bekzod R.','BR',74,'Dasturlash','Ikkalangiz ham IELTS o‘rganmoqchisiz. Bir yo‘nalish.'],['m3','Malika S.','MS',68,'Tillar','U MUN bo‘yicha mentor, siz Notiq o‘rganmoqchisiz.']];
-    const matches=mdata.map((m,i)=>({i,id:m[0],name:m[1],init:m[2],pct:m[3],fill:s.loading?0:m[3]/100,dir:m[4],why:m[5],sent:!!s.sent[m[0]],canSend:!s.sent[m[0]],open:()=>set({sheet:m[0]})}));
+    const matches=mdata.map((m,i)=>({i,id:m[0],name:m[1],init:m[2],pct:m[3],fill:s.loading?0:m[3]/100,dir:m[4],why:m[5],sent:!!s.sent[m[0]],verified:m[0]==='m2',canSend:!s.sent[m[0]],open:()=>set({sheet:m[0]})}));
     const sh=mdata.find(m=>m[0]===s.sheet)||mdata[0];
     const exL=['Yuborildi','Qabul','Belgilandi'];
     const days=['Ertalab','Kunduzi','Kechqurun'], partner={'1-1':1,'3-2':1,'4-1':1,'5-0':1};
@@ -234,7 +252,7 @@ class Component extends DCLogic {
     const bd=[['IELTS 7.5','Tasdiqlangan'],['MUN ishtirokchisi','Tasdiqlangan'],['Figma mentori','Tasdiqlangan'],['Tadqiqot maqolasi','Tekshiruvda']];
     const teamI=['SM','AK','BR'].slice(0,s.team);
     return {
-      rootVars, isOnb:s.screen==='onb', isMain:s.screen!=='onb', isHome:s.screen==='home', isEx:s.screen==='ex', isCal:s.screen==='cal', isPort:s.screen==='port', isProj:s.screen==='proj',
+      rootVars, isOnb:s.screen==='onb', isMain:s.screen!=='onb', isHome:s.screen==='home', isProf:s.screen==='prof', openProf:()=>set({screen:'prof'}), editProf:()=>set({screen:'onb',step:0}), profDir:s.dir, teachList:Object.keys(s.teach).filter(k=>s.teach[k]).map(k=>({label:k})), learnList:Object.keys(s.learn).filter(k=>s.learn[k]).map(k=>({label:k})), profRows:[['notif','Bot xabarlari','Taklif va sessiya eslatmalari'],['vis','Profil ko‘rinishi','Sheriklarga ko‘rinadi']].map(r=>({label:r[1],hint:r[2],on:s[r[0]],bg:s[r[0]]?'var(--ac)':'var(--line)',x:s[r[0]]?'18px':'0px',tap:()=>set({[r[0]]:!s[r[0]]})})), isEx:s.screen==='ex', isCal:s.screen==='cal', isPort:s.screen==='port', isProj:s.screen==='proj',
       step0:s.step===0, step1:s.step===1, step2:last, stepFill:(s.step+1)/3, stepLabel:(s.step+1)+' / 3', canBack:s.step>0,
       dirs, teachChips:chips(s.teach,'teach'), learnChips:chips(s.learn,'learn'),
       summary:s.dir+' · O‘rgatadi: '+names(s.teach)+' · O‘rganadi: '+names(s.learn),
@@ -244,14 +262,14 @@ class Component extends DCLogic {
       sheetAnim:s.closing?'sheetDown':'sheetUp', backAnim:s.closing?'fadeOut':'fade',
       closeSheet:()=>{set({closing:true});this.later(()=>set({sheet:null,closing:false}),200);},
       sendReq:()=>{ if(s.sending) return; set({sending:true}); this.later(()=>{set({sending:false,closing:true,sent:{...this.state.sent,[s.sheet]:true}});this.later(()=>set({sheet:null,closing:false}),200);},700); },
-      exFill:s.exStep/2, exSteps:exL.map((l,i)=>({label:l,color:i<=s.exStep?'var(--ac)':'var(--sub)'})), exDone:s.exStep===2,
+      exFill:s.exStep/2, exSteps:exL.map((l,i)=>({label:l,color:i<=s.exStep?'var(--act)':'var(--sub)'})), exDone:s.exStep===2,
       advLabel:s.exStep===0?'Aziza qabul qildi (demo)':s.exStep===1?'Vaqtni tasdiqlash':'Qayta boshlash', advance:()=>set({exStep:(s.exStep+1)%3}),
       calRows, matchCount:mc,
-      badges:bd.map((b,i)=>({i,title:b[0],status:b[1],color:i<3?'var(--ac)':'var(--sub)'})),
+      badges:bd.map((b,i)=>({i,title:b[0],status:b[1],color:i<3?'var(--act)':'var(--sub)',ib:i<3?'var(--gold)':'var(--soft)',ic:i<3?'#4A3800':'var(--sub)'})),
       invPending:s.inv==='pending', invDeclined:s.inv==='declined', accept:()=>set({inv:'accepted',team:3}), decline:()=>set({inv:'declined'}),
       team:teamI.map((t,i)=>({init:t,ml:i?'-10px':'0'})), teamCount:s.team,
-      navShift:(idx*100)+'%',
-      tabs:tabsDef.map((t,i)=>({label:t[1],color:i===idx?'var(--ink)':'var(--sub)',tap:()=>{ if(t[0]==='home'&&s.screen!=='home') this.load(); set({screen:t[0]}); }}))
+      navShift:(idx*100)+'%', navOp:s.screen==='prof'?0:1,
+      tabs:tabsDef.map((t,i)=>({label:t[1],color:i===idx&&s.screen!=='prof'?'var(--ink)':'var(--sub)',tap:()=>{ if(t[0]==='home'&&s.screen!=='home') this.load(); set({screen:t[0]}); }}))
     };
   }
 }
