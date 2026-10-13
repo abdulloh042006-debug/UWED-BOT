@@ -9,6 +9,22 @@ const str=(x,n=500)=>cleanText(x,n);
 const url=x=>{try{const u=new URL(x);if(!['https:','http:'].includes(u.protocol)||u.username||u.password)throw Error();return u.toString()}catch{throw Error('invalid URL')}};
 const staff=u=>['moderator','admin'].includes(u.role);
 
+export async function verificationEvidence(request,env,path,method,me){
+  const match=path.match(/^verification-evidence\/([^/]+)$/);
+  if(!match)return null;
+  if(method!=='GET')return fail(405,'method','Bu amal mavjud emas');
+  if(!env.BUCKET)return fail(503,'storage','Fayl xizmati hozircha sozlanmagan');
+  const file=await one(env.DB,'SELECT * FROM verification_evidence WHERE request_id=?',match[1]);
+  if(!file||(file.owner_id!==me.id&&!staff(me)))return fail(404,'file','Fayl topilmadi');
+  const object=await env.BUCKET.get(file.storage_key);
+  if(!object)return fail(404,'file','Fayl topilmadi');
+  return new Response(object.body,{headers:{
+    'content-type':file.content_type,
+    'content-disposition':'attachment; filename="'+file.filename.replace(/[^a-zA-Z0-9._-]/g,'_')+'"',
+    'cache-control':'private, no-store','x-content-type-options':'nosniff'
+  }});
+}
+
 export async function evidence(request,env,path,method,me){
   const upload=path.match(/^portfolio\/([^/]+)\/evidence$/),download=path.match(/^evidence\/([^/]+)$/);
   if (!upload && !download) return null;

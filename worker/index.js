@@ -1,6 +1,6 @@
 import { verifyInitData, signSession, verifySession, scoreMatch, nextRequestStatus, cleanText, randomId } from './core.js';
 import { page, client } from './ui.js';
-import { evidence, teams } from './teams.js';
+import { evidence, verificationEvidence, teams } from './teams.js';
 import { protectedTier, adminTier, isTopAdmin } from './admin-access.js';
 import { admin } from './admin.js';
 import { ensureMigrations } from './migrations.js';
@@ -259,13 +259,49 @@ async function api(request, env, path, method) {
   }
   if (path === 'notifications' && method === 'GET') return json({items:await all(env.DB,'SELECT id,kind,body,target,read_at,created_at FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50',me.id)});
   if (path === 'verifications' && method === 'POST') {
-    const b=await request.json(); if (!['university','mentor'].includes(b.kind)) return fail(400,'input','Ariza turi noto‘g‘ri');
-    let evidence;
-    try { evidence=new URL(b.evidence_url); } catch { return fail(400,'evidence','Dalil havolasi kerak'); }
-    if (evidence.protocol!=='https:' || evidence.username || evidence.password || evidence.href.length>1000) return fail(400,'evidence','HTTPS dalil havolasi kerak');
+    const isMultipart=/^multipart\/form-data(?:;|$)/i.test(request.headers.get('content-type')||'');
+    const form=isMultipart?await request.formData():null;
+    const b=form?Object.fromEntries(form):await request.json();
+    if (!['university','mentor'].includes(b.kind)) return fail(400,'input','Ariza turi noto‘g‘ri');
+    const file=form?.get('evidence_file'), hasFile=!!(file&&typeof file.arrayBuffer==='function');
+    if (file&&!hasFile) return fail(400,'evidence','Faylni tekshiring');
+    if (hasFile&&String(b.evidence_url||'').trim()) return fail(400,'evidence','Havola yoki fayldan bittasini tanlang');
+    let evidenceUrl=null,bytes=null,contentType=null,filename=null;
+    if (hasFile) {
+      if (!env.BUCKET) return fail(503,'storage','Fayl xizmati hozircha sozlanmagan');
+      if (!Number.isSafeInteger(file.size)||file.size<1||file.size>10485760) return fail(413,'size','Fayl 10 MB dan oshmasin va bo‘sh bo‘lmasin');
+      contentType=file.type;
+      if (!['application/pdf','image/jpeg','image/png','image/webp'].includes(contentType)) return fail(415,'type','PDF, JPG, PNG yoki WEBP yuboring');
+      bytes=new Uint8Array(await file.arrayBuffer());
+      if (bytes.length!==file.size) return fail(400,'size','Fayl hajmi mos emas');
+      const pdf=bytes.length>=5&&String.fromCharCode(...bytes.slice(0,5))==='%PDF-';
+      const png=bytes.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v);
+      const jpg=bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+      const webp=bytes.length>=12&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP';
+      if (!(contentType==='application/pdf'&&pdf||contentType==='image/png'&&png||contentType==='image/jpeg'&&jpg||contentType==='image/webp'&&webp)) return fail(415,'signature','Fayl turi mos emas');
+      filename=text(file.name||'dalil',120).replace(/[\\/\x00-\x1f]+/g,'_')||'dalil';
+    } else {
+      let link;
+      try { link=new URL(b.evidence_url); } catch { return fail(400,'evidence','Dalil havolasi yoki fayl kerak'); }
+      if (link.protocol!=='https:'||link.username||link.password||link.href.length>1000) return fail(400,'evidence','HTTPS dalil havolasi kerak');
+      evidenceUrl=link.toString();
+    }
     const prior=await row(env.DB,"SELECT id FROM verification_requests WHERE user_id=? AND kind=? AND status='pending'",me.id,b.kind);
     if (prior) return fail(409,'duplicate','Arizangiz ko‘rib chiqilmoqda');
-    await run(env.DB,'INSERT INTO verification_requests(id,user_id,kind,evidence_url) VALUES(?,?,?,?)',randomId(),me.id,b.kind,evidence.toString()); return json({status:'pending'},201);
+    const id=randomId();
+    if (hasFile) {
+      const key='verification/'+me.id+'/'+id;
+      await env.BUCKET.put(key,bytes,{httpMetadata:{contentType}});
+      try {
+        await env.DB.batch([
+          env.DB.prepare('INSERT INTO verification_requests(id,user_id,kind,evidence_url) VALUES(?,?,?,NULL)').bind(id,me.id,b.kind),
+          env.DB.prepare('INSERT INTO verification_evidence(request_id,owner_id,storage_key,content_type,size_bytes,filename) VALUES(?,?,?,?,?,?)').bind(id,me.id,key,contentType,bytes.length,filename)
+        ]);
+      } catch(e) { try { await env.BUCKET.delete(key); } catch {} throw e; }
+    } else {
+      await run(env.DB,'INSERT INTO verification_requests(id,user_id,kind,evidence_url) VALUES(?,?,?,?)',id,me.id,b.kind,evidenceUrl);
+    }
+    return json({id,status:'pending'},201);
   }
   if (path === 'admin/verifications' && method === 'GET') {
     if (!['admin','moderator'].includes(me.role)) return fail(403,'role','Ruxsat yo‘q');
@@ -375,7 +411,7 @@ export default {
       }
       if (path.startsWith('/api/v1/')) {
         if (!['GET','POST','PATCH','DELETE'].includes(method)) return fail(405,'method','Bu amal mavjud emas');
-        const route=path.slice(8), isEvidence=/^portfolio\/[^/]+\/evidence$/.test(route);
+        const route=path.slice(8), isEvidence=/^portfolio\/[^/]+\/evidence$/.test(route)||(route==='verifications'&&method==='POST'&&/^multipart\/form-data(?:;|$)/i.test(request.headers.get('content-type')||''));
         if (!isEvidence && Number(request.headers.get('content-length')||0)>16384) return fail(413,'size','So‘rov juda katta');
         if (method!=='GET' && !isEvidence && request.headers.get('content-type')?.split(';')[0]!=='application/json') return fail(415,'type','JSON yuboring');
         // Same-origin browser writes: no cross-origin CORS and explicit origin check.
@@ -384,10 +420,10 @@ export default {
           if (origin && origin!==url.origin) return fail(403,'origin','Ruxsat yo‘q');
         }
         let result;
-        if (isEvidence || /^evidence\/[^/]+$/.test(route)) {
+        if (isEvidence || /^evidence\/[^/]+$/.test(route) || /^verification-evidence\/[^/]+$/.test(route)) {
           if (!env.DB || !env.SESSION_SECRET) return fail(503,'config','Xizmat sozlanmagan');
           const me=await actor(request,env);
-          result=me?(me.suspended_at?fail(403,'suspended','Hisobingiz to`xtatilgan'):await evidence(request,env,route,method,me)):fail(401,'auth','Telegram orqali qayta kiring');
+          result=me?(me.suspended_at?fail(403,'suspended','Hisobingiz to`xtatilgan'):await (route.startsWith('verification-evidence/')?verificationEvidence:evidence)(request,env,route,method,me)):fail(401,'auth','Telegram orqali qayta kiring');
         } else result=await api(request,env,route,method);
         if (ctx?.waitUntil && env.DB && result.status<500) ctx.waitUntil(flushOutbox(env));
         return result;

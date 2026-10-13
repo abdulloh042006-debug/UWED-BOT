@@ -297,3 +297,35 @@ test('production HTML includes responsive brand styling and no external icon fon
  assert.match(html,/safe-area-inset-bottom/);
  assert.doesNotMatch(html,/fonts\.googleapis\.com|fontawesome|cdnjs\.cloudflare\.com/);
 });
+
+test('verification accepts private image evidence or HTTPS URL and admins can moderate both',async()=>{
+  const x=setup(),objects=new Map();x.env.BOOTSTRAP_ADMIN_TELEGRAM_ID='999';
+  x.env.BUCKET={put:async(k,v)=>objects.set(k,v),get:async(k)=>objects.has(k)?{body:objects.get(k)}:null,delete:async(k)=>objects.delete(k)};
+  const admin=await x.login(999),student=await x.login(101),other=await x.login(202);
+  const bytes=Uint8Array.from([137,80,78,71,13,10,26,10,1,2,3]);
+  const form=new FormData();form.set('kind','university');form.set('evidence_file',new Blob([bytes],{type:'image/png'}),'student.png');
+  const req=new Request(base+'/api/v1/verifications',{method:'POST',headers:{cookie:student,origin:base},body:form});
+  const res=await worker.fetch(req,x.env),data=await res.json();assert.equal(res.status,201,JSON.stringify(data));
+  assert.equal(objects.size,1);
+  assert.equal((await x.call('/api/v1/verifications','POST',{kind:'university',evidence_url:'https://example.org/doc'},student)).status,409);
+  const items=(await x.call('/api/v1/admin/verifications?type=university','GET',undefined,admin)).data.items;
+  assert.equal(items[0].evidence_file_id,data.id);assert.equal(items[0].evidence_url,null);
+  assert.equal((await x.call('/api/v1/verification-evidence/'+data.id,'GET',undefined,other)).status,404);
+  const file=await worker.fetch(new Request(base+'/api/v1/verification-evidence/'+data.id,{headers:{cookie:admin}}),x.env);
+  assert.equal(file.status,200);assert.equal(file.headers.get('content-disposition'),'attachment; filename="student.png"');
+  assert.deepEqual(new Uint8Array(await file.arrayBuffer()),bytes);
+  assert.equal((await x.call('/api/v1/admin/verifications/'+data.id+'/approve','POST',{},admin)).status,200);
+  assert.equal((await x.call('/api/v1/me','GET',undefined,student)).data.verified_university,true);
+  const link=await x.call('/api/v1/verifications','POST',{kind:'mentor',evidence_url:'https://example.org/mentor'},student);
+  assert.equal(link.status,201);assert.equal((await x.call('/api/v1/admin/verifications?type=mentor','GET',undefined,admin)).data.items[0].evidence_file_id,null);
+});
+test('verification rejects forged file types, oversized uploads and cross-origin submissions',async()=>{
+  const x=setup(),student=await x.login(101);x.env.BUCKET={put:async()=>{},get:async()=>null,delete:async()=>{}};
+  async function upload(blob,filename='bad.pdf',headers={}){const f=new FormData();f.set('kind','mentor');f.set('evidence_file',blob,filename);return worker.fetch(new Request(base+'/api/v1/verifications',{method:'POST',headers:{cookie:student,...headers},body:f}),x.env)}
+  assert.equal((await upload(new Blob(['not a pdf'],{type:'application/pdf'}))).status,415);
+  assert.equal((await upload(new Blob([new Uint8Array(10485761)],{type:'application/pdf'}))).status,413);
+  const pdf=new Blob([Uint8Array.from([37,80,68,70,45,49])],{type:'application/pdf'});
+  assert.equal((await upload(pdf,'proof.pdf',{origin:'https://attacker.test'})).status,403);
+  assert.equal((await x.call('/api/v1/verifications','POST',{kind:'mentor',evidence_url:'http://insecure.test'},student)).status,400);
+  assert.match(client,/name="evidence_file"/);
+});
