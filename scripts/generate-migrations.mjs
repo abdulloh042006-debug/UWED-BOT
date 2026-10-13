@@ -2,7 +2,7 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 
 const files = (await readdir('db')).filter(name => /^\d{4}_[a-z0-9_-]+\.sql$/.test(name)).sort();
 if (!files.length) throw new Error('No numbered SQL migrations found in db/');
-const migrations = await Promise.all(files.map(async id => ({ id, sql: await readFile(`db/${id}`, 'utf8') })));
+const migrations = await Promise.all(files.map(async id => ({ id, sql: (await readFile(`db/${id}`, 'utf8')).replace(/\r\n?/g, '\n') })));
 const runtime = `
 const initialized = new WeakMap();
 const run = (db, sql, ...args) => db.prepare(sql).bind(...args).run();
