@@ -49,6 +49,29 @@ export async function admin(request,env,path,method,me){
       const {telegram_user_id,...publicUser}=u;
       return json({item:{...publicUser,admin_label:visibleAdminLabel(adminTier(u,env))},activity});
     }
+    const directMessage=route.match(/^users\/([^/]+)\/message$/);
+    if(directMessage&&method==='POST'){
+      if(me.role!=='admin')return fail(403,'role','Shaxsiy xabarni faqat admin yubora oladi');
+      const target=await one(db,'SELECT id,telegram_user_id,suspended_at FROM users WHERE id=?',directMessage[1]);
+      if(!target||protectedTier(target.telegram_user_id,env)==='owner')return fail(404,'user','Foydalanuvchi topilmadi');
+      if(target.id===me.id)return fail(409,'self','O‘zingizga xabar yuborolmaysiz');
+      if(target.suspended_at)return fail(409,'suspended','Bu hisob vaqtincha to‘xtatilgan');
+      const b=await body(request);
+      if(typeof b.text!=='string')throw Error('message');
+      const message=b.text.replace(/\r\n?/g,'\n').trim();
+      if(!message||message.length>1000||/[\u0000-\u0009\u000B-\u001F\u007F]/.test(message))throw Error('message');
+      const hourly=await count(db,"SELECT count(*) n FROM audit_log WHERE actor_id=? AND action='direct_message' AND created_at>=datetime('now','-1 hour')",me.id);
+      if(hourly>=20)return fail(429,'rate','Bir soatda ko‘pi bilan 20 ta shaxsiy xabar yuborish mumkin');
+      const recent=await count(db,"SELECT count(*) n FROM audit_log WHERE actor_id=? AND action='direct_message' AND object_id=? AND created_at>=datetime('now','-30 seconds')",me.id,target.id);
+      if(recent)return fail(429,'rate','Shu foydalanuvchiga qayta yozishdan oldin 30 soniya kuting');
+      const notificationId=randomId(),bodyText='UWED administratsiyasidan shaxsiy xabar:\n'+message;
+      await db.batch([
+        db.prepare('INSERT INTO notifications(id,user_id,kind,body,target) VALUES(?,?,?,?,?)').bind(notificationId,target.id,'admin_message',bodyText,'home'),
+        db.prepare('INSERT INTO bot_outbox(id,notification_id) VALUES(?,?)').bind(randomId(),notificationId),
+        db.prepare('INSERT INTO audit_log(id,actor_id,action,object_type,object_id,details) VALUES(?,?,?,?,?,?)').bind(randomId(),me.id,'direct_message','user',target.id,JSON.stringify({notification_id:notificationId,length:message.length}))
+      ]);
+      return json({ok:true,queued:1,notification_id:notificationId},201);
+    }
     const userAction=route.match(/^users\/([^/]+)\/(suspend|restore|role)$/);
     if(userAction&&method==='POST'){
       if(me.role!=='admin')return fail(403,'role','Faqat admin uchun');
@@ -161,5 +184,5 @@ export async function admin(request,env,path,method,me){
       const has_more=items.length>p.limit;items.length=Math.min(items.length,p.limit);return json({items,next_cursor:has_more?items.at(-1).id:null,has_more});
     }
     return null;
-  }catch(e){if(['pagination','filter','body','reason','role','announcement','setting','cursor'].includes(e.message)||e.message==='invalid text')return fail(400,'input','Ma`lumotlarni tekshiring');throw e}
+  }catch(e){if(['pagination','filter','body','reason','role','announcement','setting','cursor','message'].includes(e.message)||e.message==='invalid text')return fail(400,'input','Ma`lumotlarni tekshiring');throw e}
 }

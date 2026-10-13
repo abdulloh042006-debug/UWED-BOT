@@ -329,3 +329,37 @@ test('verification rejects forged file types, oversized uploads and cross-origin
   assert.equal((await x.call('/api/v1/verifications','POST',{kind:'mentor',evidence_url:'http://insecure.test'},student)).status,400);
   assert.match(client,/name="evidence_file"/);
 });
+
+test('admin sends a private message only to a selected user and queues Telegram delivery',async()=>{
+  const x=setup();x.env.BOOTSTRAP_ADMIN_TELEGRAM_ID='999';
+  const admin=await x.login(999),a=await x.login(101),b=await x.login(202),outsider=await x.login(303);
+  const aId=(await x.call('/api/v1/me','GET',undefined,a)).data.id;
+  const bId=(await x.call('/api/v1/me','GET',undefined,b)).data.id;
+  assert.equal((await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'No permission'},b)).status,403);
+  assert.equal((await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'  '},admin)).status,400);
+  assert.equal((await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'x'.repeat(1001)},admin)).status,400);
+  assert.equal((await x.call('/api/v1/admin/users/no-user/message','POST',{text:'Hi'},admin)).status,404);
+  const result=await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'Assalomu alaykum!\nYaxshi kun.'},admin);
+  assert.equal(result.status,201,JSON.stringify(result.data));
+  assert.equal(result.data.queued,1);
+  assert.equal((await x.call('/api/v1/notifications','GET',undefined,a)).data.items.length,1);
+  const items=(await x.call('/api/v1/notifications','GET',undefined,a)).data.items;
+  assert.equal(items[0].kind,'admin_message');
+  assert.match(items[0].body,/Yaxshi kun/);
+  assert.equal((await x.call('/api/v1/notifications','GET',undefined,b)).data.items.length,0);
+  assert.equal((await x.call('/api/v1/notifications','GET',undefined,outsider)).data.items.length,0);
+  const outbox=x.db.raw.prepare('SELECT n.user_id,n.kind,o.status FROM bot_outbox o JOIN notifications n ON n.id=o.notification_id').all();
+  assert.deepEqual(outbox,[{user_id:aId,kind:'admin_message',status:'pending'}]);
+  const audit=x.db.raw.prepare("SELECT actor_id,object_id,details FROM audit_log WHERE action='direct_message'").all();
+  assert.equal(audit.length,1);assert.equal(audit[0].object_id,aId);
+  assert.doesNotMatch(audit[0].details,/Yaxshi kun/);
+  assert.equal((await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'Duplicate'},admin)).status,429);
+  assert.equal((await x.call('/api/v1/admin/users/'+bId+'/message','POST',{text:'Alohida xabar'},admin)).status,201);
+  assert.equal((await x.call('/api/v1/notifications','GET',undefined,b)).data.items.length,1);
+  const moderatorId=(await x.call('/api/v1/me','GET',undefined,outsider)).data.id;
+  assert.equal((await x.call('/api/v1/admin/users/'+moderatorId+'/role','POST',{role:'moderator'},admin)).status,200);
+  assert.equal((await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'Moderator'},outsider)).status,403);
+  assert.equal((await x.call('/api/v1/admin/users/'+aId+'/suspend','POST',{reason:'Temporary'},admin)).status,200);
+  assert.equal((await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'Paused'},admin)).status,409);
+  assert.match(client,/id="admin-direct-message"/);
+});
