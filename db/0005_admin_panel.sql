@@ -1,0 +1,16 @@
+ALTER TABLE users ADD COLUMN suspended_at TEXT;
+ALTER TABLE users ADD COLUMN suspended_reason TEXT;
+ALTER TABLE projects ADD COLUMN hidden_at TEXT;
+ALTER TABLE projects ADD COLUMN hidden_by TEXT REFERENCES users(id);
+ALTER TABLE portfolio_items ADD COLUMN hidden_at TEXT;
+ALTER TABLE portfolio_items ADD COLUMN rejection_reason TEXT;
+ALTER TABLE reviews ADD COLUMN hidden_at TEXT;
+ALTER TABLE reports ADD COLUMN resolution TEXT;
+ALTER TABLE audit_log ADD COLUMN details TEXT;
+ALTER TABLE notifications ADD COLUMN announcement_id TEXT REFERENCES announcements(id);
+CREATE TABLE announcements (id TEXT PRIMARY KEY, audience TEXT NOT NULL CHECK(audience IN ('all','students','mentors')), text TEXT NOT NULL, created_by TEXT NOT NULL REFERENCES users(id), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE admin_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_by TEXT REFERENCES users(id), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+INSERT INTO admin_settings(key,value) VALUES ('maintenance_mode','false'),('allow_projects','true'),('allow_skill_exchange','true'),('announcement_enabled','true');
+CREATE INDEX users_role_status ON users(role,suspended_at,created_at);
+CREATE INDEX audit_recent ON audit_log(created_at,id);
+CREATE INDEX announcements_recent ON announcements(created_at);

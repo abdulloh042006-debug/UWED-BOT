@@ -1,0 +1,10 @@
+import { mkdir, rm, cp } from 'node:fs/promises';
+import { Script } from 'node:vm';
+import { client } from '../worker/ui.js';
+new Script(client, { filename: 'app.js' });
+await rm('dist', { recursive: true, force: true });
+await mkdir('dist/server', { recursive: true });
+await mkdir('dist/.openai', { recursive: true });
+await cp('worker', 'dist/server', { recursive: true });
+await cp('.openai/hosting.json', 'dist/.openai/hosting.json');
+console.log('Built dist/server/index.js');
