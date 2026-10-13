@@ -13,7 +13,8 @@ export const BOT_PROFILE = Object.freeze({
     { command: 'matches', description: 'Mos sheriklar' },
     { command: 'sessions', description: 'Sessiyalar' },
     { command: 'projects', description: 'Loyihalar' },
-    { command: 'notifications', description: 'Bildirishnomalar' }
+    { command: 'notifications', description: 'Bildirishnomalar' },
+    { command: 'messages', description: 'Shaxsiy xabarlar' }
   ]
 });
 
