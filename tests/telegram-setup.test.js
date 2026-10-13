@@ -14,7 +14,7 @@ const ok = result => new Response(JSON.stringify({ ok: true, result }), {
 
 test('Bot launch config rejects insecure or misdirected setup', () => {
   assert.equal(validateConfig(env).webhookUrl, 'https://uwed.example/api/v1/bot/webhook');
-  assert.equal(BOT_PROFILE.commands.length, 7);
+  assert.equal(BOT_PROFILE.commands.length, 8);
   assert.throws(() => validateConfig({ ...env, MINIAPP_URL: 'http://uwed.example/' }), /HTTPS/);
   assert.throws(() => validateConfig({ ...env, MINIAPP_URL: 'https://localhost/' }), /local/);
   assert.throws(() => validateConfig({ ...env, TELEGRAM_WEBHOOK_SECRET: '' }), /SECRET/);
@@ -62,10 +62,10 @@ test('correctly sets menus, descriptions, commands and verified webhook', async 
     'getMe', 'setMyName', 'setMyDescription', 'setMyShortDescription',
     'setMyCommands', 'setChatMenuButton', 'setWebhook', 'getWebhookInfo'
   ]);
-  assert.equal(calls.find(x => x.method === 'setMyCommands').data.commands.length, 7);
+  assert.equal(calls.find(x => x.method === 'setMyCommands').data.commands.length, 8);
   assert.equal(calls.find(x => x.method === 'setMyDescription').data.description, BOT_PROFILE.description);
   assert.equal(BOT_PROFILE.short_description, 'UWED talabalari uchun bilim almashish, mentorlik, loyihalar va portfolio platformasi.');
-  assert.deepEqual(BOT_PROFILE.commands.map(c => c.description), ['Ilovani ochish','Yordam','Mening profilim','Mos sheriklar','Sessiyalar','Loyihalar','Bildirishnomalar']);
+  assert.deepEqual(BOT_PROFILE.commands.map(c => c.description), ['Ilovani ochish','Yordam','Mening profilim','Mos sheriklar','Sessiyalar','Loyihalar','Bildirishnomalar','Shaxsiy xabarlar']);
   assert.equal(calls.find(x => x.method === 'setChatMenuButton').data.menu_button.web_app.url, env.MINIAPP_URL);
   assert.equal(calls.find(x => x.method === 'setWebhook').data.secret_token, env.TELEGRAM_WEBHOOK_SECRET);
   assert.equal(JSON.stringify(result).includes(token), false);
