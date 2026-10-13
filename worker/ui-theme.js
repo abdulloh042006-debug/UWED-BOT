@@ -26,11 +26,12 @@ label{display:block;margin:10px 0 4px;font-size:.9rem;font-weight:600}
 .card{border:1px solid var(--line);border-radius:18px;box-shadow:none}
 .pill{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:12px;font-size:.72rem;font-weight:700;background:var(--soft);color:var(--text)}
 .pill.ok{background:rgba(56,86,126,.15);color:var(--accent-text)}.pill.warn{background:rgba(212,175,55,.22);color:var(--gold-ink)}.pill.bad{background:rgba(138,0,25,.13);color:var(--bad-ink)}.pill.gold{background:var(--gold);color:#3d2f00}.pill.bur{background:var(--burgundy);color:#fff}.pill.mute{background:var(--soft);color:var(--muted)}
-.empty{text-align:center;color:var(--muted);border-style:dashed;padding:24px 16px}
+.empty{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;color:var(--muted);border-style:dashed;padding:28px 20px}.empty-ico{width:56px;height:56px;margin-bottom:6px;border-radius:18px;display:grid;place-items:center;background:var(--soft);color:var(--accent-text)}.empty-ico svg{width:26px;height:26px}.empty h2{margin:0;color:var(--text)}.empty p{margin:0 0 6px;max-width:30ch}.empty>button{margin:8px 0 0}#search{flex-wrap:nowrap}#search input{min-width:0}#search button{flex:none}.stack>button{width:100%}.row>.secondary[data-view]{flex:1}
 .state-error{border-left:4px solid var(--burgundy)}.state-error p{color:var(--bad-ink)}
 /* header */
 .admin-head,.brand-head{display:flex;gap:12px;align-items:center;background:var(--header);color:#fff;margin:-18px -16px 18px;padding:18px 18px 20px;border-radius:0 0 24px 24px}
 .admin-head>div:nth-child(2){flex:1}.admin-head small,.brand-head small{display:block;color:#d9e3ef;font-size:.75rem}.admin-head .pill{background:#ffffff2b;color:#fff}
+.brand-head{padding:12px 16px 14px;margin-bottom:14px;border-radius:0 0 20px 20px}.brand-head .admin-mark{width:34px;height:34px}.brand-head .admin-mark svg{width:19px;height:19px}.brand-head strong{font-size:.95rem}.brand-head small{font-size:.7rem}
 .admin-mark{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;background:#fff;color:#38567e}.admin-mark svg{width:22px;height:22px}
 /* navigation */
 nav{background:var(--card);border-top:1px solid var(--line);box-shadow:none;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
