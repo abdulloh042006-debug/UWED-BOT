@@ -349,7 +349,7 @@ test('admin sends a private message only to a selected user and queues Telegram 
   assert.equal((await x.call('/api/v1/notifications','GET',undefined,b)).data.items.length,0);
   assert.equal((await x.call('/api/v1/notifications','GET',undefined,outsider)).data.items.length,0);
   const outbox=x.db.raw.prepare('SELECT n.user_id,n.kind,o.status FROM bot_outbox o JOIN notifications n ON n.id=o.notification_id').all();
-  assert.deepEqual(outbox,[{user_id:aId,kind:'admin_message',status:'pending'}]);
+  assert.deepEqual(outbox.map(x=>({...x})),[{user_id:aId,kind:'admin_message',status:'pending'}]);
   const audit=x.db.raw.prepare("SELECT actor_id,object_id,details FROM audit_log WHERE action='direct_message'").all();
   assert.equal(audit.length,1);assert.equal(audit[0].object_id,aId);
   assert.doesNotMatch(audit[0].details,/Yaxshi kun/);
@@ -362,4 +362,46 @@ test('admin sends a private message only to a selected user and queues Telegram 
   assert.equal((await x.call('/api/v1/admin/users/'+aId+'/suspend','POST',{reason:'Temporary'},admin)).status,200);
   assert.equal((await x.call('/api/v1/admin/users/'+aId+'/message','POST',{text:'Paused'},admin)).status,409);
   assert.match(client,/id="admin-direct-message"/);
+});
+
+test('private 1:1 chat: discovery, delivery, read state, privacy, block and authorization',async()=>{
+ const x=setup(),ali=await x.login(101),vali=await x.login(202),outsider=await x.login(303);
+ const a=(await x.call('/api/v1/me','GET',undefined,ali)).data.id,b=(await x.call('/api/v1/me','GET',undefined,vali)).data.id,c=(await x.call('/api/v1/me','GET',undefined,outsider)).data.id;
+ let directory=await x.call('/api/v1/chat/people?q=User','GET',undefined,ali);
+ assert.equal(directory.status,200);assert.ok(directory.data.items.some(u=>u.id===b));assert.ok(!directory.data.items.some(u=>u.id===a));
+ assert.equal((await x.call('/api/v1/chat/'+a,'POST',{body:'Hello'},ali)).status,404);
+ assert.equal((await x.call('/api/v1/chat/bogus','POST',{body:'Hello'},ali)).status,404);
+ assert.equal((await x.call('/api/v1/chat/'+b,'POST',{body:' '},ali)).status,400);
+ assert.equal((await x.call('/api/v1/chat/'+b,'POST',{body:'x'.repeat(1501)},ali)).status,400);
+ const sent=await x.call('/api/v1/chat/'+b,'POST',{body:'Salom Vali!'},ali);assert.equal(sent.status,201,JSON.stringify(sent.data));
+ assert.equal((await x.call('/api/v1/chat/conversations','GET',undefined,vali)).data.items[0].unread,1);
+ assert.equal((await x.call('/api/v1/notifications','GET',undefined,vali)).data.items[0].target,'chat:'+a);
+ assert.equal((await x.call('/api/v1/chat/'+a,'GET',undefined,vali)).data.items[0].body,'Salom Vali!');
+ assert.equal((await x.call('/api/v1/chat/conversations','GET',undefined,vali)).data.items[0].unread,0);
+ assert.equal((await x.call('/api/v1/chat/conversations','GET',undefined,outsider)).data.items.length,0);
+ assert.equal((await x.call('/api/v1/chat/'+c,'GET',undefined,ali)).data.items.length,0);
+ assert.equal((await x.call('/api/v1/chat/'+a,'POST',{body:'Salom Ali!'},vali)).status,201);
+ const list=(await x.call('/api/v1/chat/'+b,'GET',undefined,ali)).data.items;assert.deepEqual(list.map(m=>m.body),['Salom Vali!','Salom Ali!']);
+ const d=(await x.call('/api/v1/me','GET',undefined,vali)).data;
+ assert.equal((await x.call('/api/v1/me','PATCH',{display_name:d.display_name,faculty:d.faculty,bio:d.bio,interests:d.interests,privacy:'private'},vali)).status,200);
+ assert.equal((await x.call('/api/v1/chat/people?q=User','GET',undefined,outsider)).data.items.some(u=>u.id===b),false);
+ assert.equal((await x.call('/api/v1/chat/'+b,'POST',{body:'New stranger'},outsider)).status,404);
+ assert.equal((await x.call('/api/v1/chat/'+b,'POST',{body:'Old contact'},ali)).status,201);
+ assert.equal((await x.call('/api/v1/chat/'+b+'/block','POST',{},ali)).status,200);
+ assert.equal((await x.call('/api/v1/chat/'+b,'POST',{body:'Blocked'},ali)).status,403);
+ assert.equal((await x.call('/api/v1/chat/'+a,'POST',{body:'Blocked back'},vali)).status,403);
+ assert.equal((await x.call('/api/v1/chat/'+b+'/block','DELETE',{},ali)).status,200);
+ assert.equal((await x.call('/api/v1/chat/'+a,'POST',{body:'Unblocked'},vali)).status,201);
+ assert.equal((await x.call('/api/v1/chat/'+b+'?before=abc','GET',undefined,ali)).status,400);
+ assert.equal((await x.call('/api/v1/chat/people?q='+('a'.repeat(81)),'GET',undefined,ali)).status,400);
+ assert.match(client,/data-chat-messages/);assert.match(client,/chat-send/);
+});
+test('chat applies burst limits and exposes only participant conversations',async()=>{
+ const x=setup(),sender=await x.login(101),receiver=await x.login(202),stranger=await x.login(303);
+ const to=(await x.call('/api/v1/me','GET',undefined,receiver)).data.id;
+ for(let i=0;i<5;i++)assert.equal((await x.call('/api/v1/chat/'+to,'POST',{body:'Message '+i},sender)).status,201);
+ assert.equal((await x.call('/api/v1/chat/'+to,'POST',{body:'Too soon'},sender)).status,429);
+ const inbox=await x.call('/api/v1/chat/conversations','GET',undefined,sender);
+ assert.equal(inbox.data.items.length,1);assert.equal(inbox.data.items[0].last_message.length>0,true);
+ assert.equal((await x.call('/api/v1/chat/conversations','GET',undefined,stranger)).data.items.length,0);
 });
