@@ -420,7 +420,7 @@ export default {
           if (origin && origin!==url.origin) return fail(403,'origin','Ruxsat yo‘q');
         }
         let result;
-        if (isEvidence || /^evidence\/[^/]+$/.test(route) || /^verification-evidence\/[^/]+$/.test(route)) {
+        if ((isEvidence && route!=='verifications') || /^evidence\/[^/]+$/.test(route) || /^verification-evidence\/[^/]+$/.test(route)) {
           if (!env.DB || !env.SESSION_SECRET) return fail(503,'config','Xizmat sozlanmagan');
           const me=await actor(request,env);
           result=me?(me.suspended_at?fail(403,'suspended','Hisobingiz to`xtatilgan'):await (route.startsWith('verification-evidence/')?verificationEvidence:evidence)(request,env,route,method,me)):fail(401,'auth','Telegram orqali qayta kiring');
