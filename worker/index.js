@@ -1,6 +1,7 @@
 import { verifyInitData, signSession, verifySession, scoreMatch, nextRequestStatus, cleanText, randomId } from './core.js';
 import { page, client } from './ui.js';
 import { evidence, verificationEvidence, teams } from './teams.js';
+import { chats } from './chat.js';
 import { protectedTier, adminTier, isTopAdmin } from './admin-access.js';
 import { admin } from './admin.js';
 import { ensureMigrations } from './migrations.js';
@@ -85,6 +86,8 @@ async function api(request, env, path, method) {
   if (adminResult) return adminResult;
   const maintenance=await row(env.DB,"SELECT value FROM admin_settings WHERE key='maintenance_mode'");
   if(maintenance?.value==='true' && !['admin','moderator'].includes(me.role)) return fail(503,'maintenance','Xizmat vaqtincha yopiq');
+  const chatResult=await chats(request,env,path,method,me);
+  if(chatResult)return chatResult;
   const teamResult=await teams(request,env,path,method,me);
   if (teamResult) return teamResult;
   if (path === 'me' && method === 'GET') return json({ ...(await profile(env.DB, me.id)), admin_tier: adminTier(me, env) });
@@ -382,7 +385,7 @@ async function webhook(request, env) {
   }
   if (chat && message.chat.type==='private') {
     const command=String(message.text||'').split(/\s/)[0].split('@')[0];
-    const paths={ '/start':'', '/help':'', '/profile':'profile', '/matches':'matches', '/sessions':'sessions', '/projects':'projects', '/notifications':'home' };
+    const paths={ '/start':'', '/help':'', '/profile':'profile', '/matches':'matches', '/sessions':'sessions', '/projects':'projects', '/notifications':'home', '/messages':'chat' };
     const route=paths[command];
     if (route!==undefined) {
       const url=new URL(env.MINIAPP_URL); if(url.protocol!=='https:') return fail(503,'config','HTTPS manzil sozlanmagan');
