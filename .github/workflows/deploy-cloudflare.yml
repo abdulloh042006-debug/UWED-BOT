@@ -1,0 +1,83 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches: [feature/codex-core]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: \${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          CF_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_ID: \${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
+          R2_BUCKET: \${{ vars.CLOUDFLARE_R2_BUCKET_NAME }}
+        shell: bash
+        run: |
+          if [[ -n "$CF_TOKEN" && -n "$CF_ACCOUNT" && -n "$D1_ID" && -n "$R2_BUCKET" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare deployment skipped. Follow docs/CLOUDFLARE_FREE_DEPLOYMENT.md to configure the free hosting account and GitHub Actions variables/secrets."
+          fi
+
+  deploy:
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test before deployment
+        run: npm run check
+      - name: Render safe Worker config
+        env:
+          CLOUDFLARE_WORKER_NAME: \${{ vars.CLOUDFLARE_WORKER_NAME }}
+          CLOUDFLARE_D1_DATABASE_NAME: \${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_D1_DATABASE_ID: \${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
+          CLOUDFLARE_R2_BUCKET_NAME: \${{ vars.CLOUDFLARE_R2_BUCKET_NAME }}
+          MINIAPP_URL: \${{ vars.MINIAPP_URL }}
+          GEMINI_MODEL: \${{ vars.GEMINI_MODEL }}
+          SESSION_SECRET: \${{ secrets.SESSION_SECRET }}
+          TELEGRAM_BOT_TOKEN: \${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBHOOK_SECRET: \${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          BOOTSTRAP_ADMIN_TELEGRAM_ID: \${{ secrets.BOOTSTRAP_ADMIN_TELEGRAM_ID }}
+          GEMINI_API_KEY: \${{ secrets.GEMINI_API_KEY }}
+        run: npm run cloudflare:config
+      - name: Deploy to Cloudflare Workers
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: \${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --secrets-file .cloudflare-secrets.json
+          quiet: true
+      - name: Verify deployed Worker
+        env:
+          DEPLOYMENT_URL: \${{ steps.deploy.outputs.deployment-url }}
+        shell: bash
+        run: |
+          if [[ -z "$DEPLOYMENT_URL" ]]; then
+            echo "::error::Cloudflare did not return a deployment URL."
+            exit 1
+          fi
+          echo "Smoke-testing the deployed public URL (no credentials are sent)."
+          npm run site:health -- "$DEPLOYMENT_URL/"
+
+  setup-required:
+    needs: preflight
+    if: needs.preflight.outputs.ready != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "::notice::No deployment was made; Cloudflare free-plan credentials/resources are not configured yet. See docs/CLOUDFLARE_FREE_DEPLOYMENT.md."

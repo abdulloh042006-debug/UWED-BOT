@@ -13,7 +13,7 @@ npm run dev
 
 `npm run dev` starts a local-only Telegram simulator at a printed `127.0.0.1` URL. `?user=101`, `?user=202`, and `?user=999` are disposable test identities; `999` is a test admin. The simulator signs short-lived test initData and stores local SQLite data in `.dev.sqlite`. It is excluded from the Worker build and must never be used as production authentication. Delete the local test database when fresh fixtures are needed.
 
-The release build copies ESM Worker modules into `dist/server`. The authenticated API namespace is `/api/v1/`; the public root contains only the Telegram opening shell. Migrations are under `db/` in order. Do not deploy with the current `d1: null` and `r2: null` manifest: actual Sites bindings and hosted migration wiring still need a private dry run.
+The release build copies ESM Worker modules into `dist/server`. The authenticated API namespace is `/api/v1/`; the public root contains only the Telegram opening shell. Migrations are under `db/` in order. ChatGPT Sites deployment is not required: a free Cloudflare Workers + D1 + R2 deployment path is provided. See `docs/CLOUDFLARE_FREE_DEPLOYMENT.md`. The Cloudflare database is separate from the existing ChatGPT Site's data; do not switch the Telegram bot until the data migration/cutover decision is made.
 
 ## Implemented local flows
 
@@ -25,4 +25,4 @@ The release build copies ESM Worker modules into `dist/server`. The authenticate
 - Production Mini App and admin screens use the visual tokens and layout patterns in Claude's `design/*.dc.html` prototypes. Those prototypes remain unmodified references and are not shipped as runtime components.
 - Optional Gemini explanation with explicit consent, five requests per user/day, a one-day cache and rule-based fallback. Score and verification stay deterministic.
 
-See `TASKS.md`, `docs/ADMIN_INTEGRATION.md`, `docs/HOSTING_FEASIBILITY.md`, `docs/DEPLOYMENT.md`, `docs/TEST_PLAN.md` and `docs/UI_HANDOFF_FOR_CLAUDE.md` for incomplete gates and ownership. No Sites deployment, BotFather connection or real-device Telegram test has been performed.
+See `TASKS.md`, `docs/ADMIN_INTEGRATION.md`, `docs/HOSTING_FEASIBILITY.md`, `docs/CLOUDFLARE_FREE_DEPLOYMENT.md`, `docs/DEPLOYMENT.md`, `docs/TEST_PLAN.md` and `docs/UI_HANDOFF_FOR_CLAUDE.md` for remaining gates. GitHub CI is not the same as production deployment; the Cloudflare deploy workflow stays skipped until its required account settings are added.

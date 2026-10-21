@@ -3,3 +3,6 @@ dist/
 .dev.vars
 node_modules/
 *.sqlite
+wrangler.jsonc
+.cloudflare-secrets.json
+.wrangler/

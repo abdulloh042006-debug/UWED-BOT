@@ -43,7 +43,7 @@ for (const check of required) {
   }
 }
 if (fail) {
-  console.error(fail + ' check(s) are not ready. Deploy the latest feature/codex-core to your existing Site, then rerun.');
+  console.error(fail + ' check(s) are not ready. Deploy the latest feature/codex-core to the configured Worker, then rerun.');
   process.exitCode = 2;
 } else {
   console.log('All public smoke checks passed. Real Telegram login, D1 persistence and outbound bot messages still require real-device verification.');

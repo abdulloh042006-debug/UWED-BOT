@@ -8,9 +8,11 @@
     "test": "node --test tests/*.test.js",
     "build": "node scripts/build.mjs",
     "dev": "node scripts/dev.mjs",
-    "check": "node --check scripts/telegram-setup.mjs && node --check scripts/site-health.mjs && node --check worker/chat.js && node --check worker/index.js && node --check worker/core.js && node --check worker/teams.js && node --check worker/admin.js && node --check worker/ui.js && node --check scripts/dev.mjs && npm test && npm run build",
+    "check": "node --check scripts/telegram-setup.mjs && node --check scripts/site-health.mjs && node --check scripts/render-cloudflare-config.mjs && node --check worker/chat.js && node --check worker/index.js && node --check worker/core.js && node --check worker/teams.js && node --check worker/admin.js && node --check worker/ui.js && node --check scripts/dev.mjs && npm test && npm run build",
     "bot:setup": "node scripts/telegram-setup.mjs",
-    "site:health": "node scripts/site-health.mjs"
+    "site:health": "node scripts/site-health.mjs",
+    "cloudflare:config": "node scripts/render-cloudflare-config.mjs",
+    "deploy:cloudflare": "npm run cloudflare:config && npx wrangler@4 deploy --secrets-file .cloudflare-secrets.json"
   },
   "engines": {
     "node": ">=20"
