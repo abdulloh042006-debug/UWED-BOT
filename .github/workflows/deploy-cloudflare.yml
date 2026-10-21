@@ -12,14 +12,14 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     outputs:
-      ready: \${{ steps.check.outputs.ready }}
+      ready: ${{ steps.check.outputs.ready }}
     steps:
       - id: check
         env:
-          CF_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          D1_ID: \${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
-          R2_BUCKET: \${{ vars.CLOUDFLARE_R2_BUCKET_NAME }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_ID: ${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
+          R2_BUCKET: ${{ vars.CLOUDFLARE_R2_BUCKET_NAME }}
         shell: bash
         run: |
           if [[ -n "$CF_TOKEN" && -n "$CF_ACCOUNT" && -n "$D1_ID" && -n "$R2_BUCKET" ]]; then
@@ -43,29 +43,29 @@ jobs:
         run: npm run check
       - name: Render safe Worker config
         env:
-          CLOUDFLARE_WORKER_NAME: \${{ vars.CLOUDFLARE_WORKER_NAME }}
-          CLOUDFLARE_D1_DATABASE_NAME: \${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
-          CLOUDFLARE_D1_DATABASE_ID: \${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
-          CLOUDFLARE_R2_BUCKET_NAME: \${{ vars.CLOUDFLARE_R2_BUCKET_NAME }}
-          MINIAPP_URL: \${{ vars.MINIAPP_URL }}
-          GEMINI_MODEL: \${{ vars.GEMINI_MODEL }}
-          SESSION_SECRET: \${{ secrets.SESSION_SECRET }}
-          TELEGRAM_BOT_TOKEN: \${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_WEBHOOK_SECRET: \${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
-          BOOTSTRAP_ADMIN_TELEGRAM_ID: \${{ secrets.BOOTSTRAP_ADMIN_TELEGRAM_ID }}
-          GEMINI_API_KEY: \${{ secrets.GEMINI_API_KEY }}
+          CLOUDFLARE_WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+          CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_D1_DATABASE_ID: ${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
+          CLOUDFLARE_R2_BUCKET_NAME: ${{ vars.CLOUDFLARE_R2_BUCKET_NAME }}
+          MINIAPP_URL: ${{ vars.MINIAPP_URL }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          BOOTSTRAP_ADMIN_TELEGRAM_ID: ${{ secrets.BOOTSTRAP_ADMIN_TELEGRAM_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: npm run cloudflare:config
       - name: Deploy to Cloudflare Workers
         id: deploy
         uses: cloudflare/wrangler-action@v4
         with:
-          apiToken: \${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --secrets-file .cloudflare-secrets.json
           quiet: true
       - name: Verify deployed Worker
         env:
-          DEPLOYMENT_URL: \${{ steps.deploy.outputs.deployment-url }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
         shell: bash
         run: |
           if [[ -z "$DEPLOYMENT_URL" ]]; then
