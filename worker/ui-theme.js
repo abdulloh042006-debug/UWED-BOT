@@ -210,25 +210,8 @@ nav.app-nav button[aria-current=page]{background:rgba(212,175,55,.16);color:var(
 
 .section-heading{flex-wrap:wrap}.section-heading h2{flex:1 1 auto;min-width:0}
 
-/* v3.1 glass: ambient colour field + frosted translucent surfaces (only where backdrop-filter exists) */
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(46% 30% at 6% 4%,var(--blob-a),transparent 70%),radial-gradient(40% 26% at 98% 20%,var(--blob-b),transparent 70%),radial-gradient(50% 30% at 0% 62%,var(--blob-c),transparent 70%),radial-gradient(46% 28% at 100% 82%,var(--blob-d),transparent 70%),radial-gradient(44% 26% at 40% 100%,var(--blob-a),transparent 70%),linear-gradient(165deg,var(--bg-a),var(--bg-b) 55%,var(--bg-c))}
-@supports((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-.card,.quick-action,.next-card,.admin-launch,.chat-person,.empty-state,.admin-row,.stat,.dialog,details.card{background:var(--glass-grad);border:1px solid var(--glass-line);box-shadow:var(--glass-hi),0 -1px 0 rgba(255,255,255,.12) inset,var(--glass-shadow);-webkit-backdrop-filter:blur(24px) saturate(1.8);backdrop-filter:blur(24px) saturate(1.8)}
-.empty-state{border-style:solid;background:var(--glass-2)}
-input,textarea,select{background:var(--glass-2);border-color:var(--glass-line);box-shadow:var(--glass-hi);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-html[data-theme=dark] input,html[data-theme=dark] textarea,html[data-theme=dark] select{border-color:rgba(255,255,255,.14)}
-input:focus,textarea:focus,select:focus{background:var(--glass);border-color:var(--accent)}
-.secondary,button.secondary{background:var(--glass-2);box-shadow:var(--glass-hi),0 0 0 1px var(--glass-line) inset;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-.skill-chip,.pill:not(.gold):not(.bur):not(.ok):not(.warn):not(.bad){background:var(--glass-2);box-shadow:var(--glass-hi),0 0 0 1px var(--glass-line) inset}
-.chat-bubble:not(.mine){background:var(--glass);box-shadow:var(--glass-hi),0 0 0 1px var(--glass-line) inset;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-nav.app-nav{background:rgba(12,28,58,.76);-webkit-backdrop-filter:blur(24px) saturate(1.7);backdrop-filter:blur(24px) saturate(1.7);box-shadow:0 14px 34px rgba(5,12,28,.4),0 0 0 1px rgba(255,255,255,.16) inset,0 1px 0 rgba(255,255,255,.3) inset}
-html[data-theme=dark] nav.app-nav{background:rgba(19,38,74,.74)}
-.hero-stats button{background:rgba(255,255,255,.12);box-shadow:0 0 0 1px rgba(255,255,255,.22) inset,0 1px 0 rgba(255,255,255,.35) inset;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
-.scrim{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-body>p[role=status]{background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
-}
 /* gloss on dark banners */
-.hero::after,.page-heading::before,.profile-intro::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(160deg,rgba(255,255,255,.2),rgba(255,255,255,0) 38%);box-shadow:0 0 0 1px rgba(255,255,255,.14) inset}
+.hero::after,.page-heading::before,.profile-intro::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,0) 36%);box-shadow:0 0 0 1px rgba(255,255,255,.14) inset}
 .profile-intro{position:relative;overflow:hidden}
 .hero>*,.profile-intro>*{position:relative;z-index:1}
 .hero .hero-star{position:absolute;z-index:0}
@@ -238,5 +221,30 @@ body>p[role=status]{background:var(--glass);-webkit-backdrop-filter:blur(18px) s
 .admin-launch{border-left:4px solid var(--burgundy)}.next-card.alert{border-color:var(--gold)}.state-error{border-left:4px solid var(--burgundy)}.note-card.unread{border-color:var(--accent)}
 .hero-star{opacity:.2;right:-50px;top:-46px}
 
-body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 88% 30%,var(--orb-1) 0 72px,transparent 74px),radial-gradient(circle at 6% 58%,var(--orb-2) 0 92px,transparent 94px),radial-gradient(circle at 80% 72%,var(--orb-3) 0 64px,transparent 66px),radial-gradient(circle at 22% 92%,var(--orb-4) 0 70px,transparent 72px);opacity:var(--orb-op,.9)}
+
+/* Skin "glass" (opt-in from Profile): clear, bright, cool-toned frosted surfaces. Classic skin stays flat and clean. */
+html[data-skin=glass]{--glass-card:linear-gradient(135deg,rgba(255,255,255,.66),rgba(255,255,255,.32));--glass-soft:rgba(255,255,255,.42);--glass-edge:rgba(255,255,255,.9);--glass-sh:0 10px 30px rgba(50,90,160,.14);--glass-top:inset 0 1px 0 rgba(255,255,255,.95)}
+html[data-skin=glass][data-theme=dark]{--glass-card:linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.04));--glass-soft:rgba(255,255,255,.07);--glass-edge:rgba(255,255,255,.18);--glass-sh:0 10px 30px rgba(0,0,0,.35);--glass-top:inset 0 1px 0 rgba(255,255,255,.14)}
+html[data-skin=glass] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 38% at 12% 0,rgba(110,165,255,.55),transparent 72%),radial-gradient(60% 34% at 100% 34%,rgba(160,205,255,.5),transparent 72%),radial-gradient(70% 36% at 0 100%,rgba(130,185,255,.4),transparent 72%),linear-gradient(180deg,#e4efff,#f3f8ff 55%,#fbfdff)}
+html[data-skin=glass][data-theme=dark] body::before{background:radial-gradient(70% 38% at 12% 0,rgba(60,120,255,.42),transparent 72%),radial-gradient(60% 34% at 100% 38%,rgba(50,100,220,.3),transparent 72%),radial-gradient(70% 36% at 0 100%,rgba(40,90,200,.28),transparent 72%),linear-gradient(180deg,#071328,#091a36 60%,#06101f)}
+@supports((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+html[data-skin=glass] .card,html[data-skin=glass] .quick-action,html[data-skin=glass] .next-card,html[data-skin=glass] .admin-launch,html[data-skin=glass] .chat-person,html[data-skin=glass] .empty-state,html[data-skin=glass] .admin-row,html[data-skin=glass] .stat,html[data-skin=glass] .dialog,html[data-skin=glass] details.card{background:var(--glass-card);border:1px solid var(--glass-edge);box-shadow:var(--glass-top),var(--glass-sh);-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6)}
+html[data-skin=glass] .empty-state{border-style:solid}
+html[data-skin=glass] input,html[data-skin=glass] textarea,html[data-skin=glass] select{background:var(--glass-soft);border-color:var(--glass-edge);box-shadow:var(--glass-top)}
+html[data-skin=glass] .secondary,html[data-skin=glass] button.secondary{background:var(--glass-soft);box-shadow:var(--glass-top),0 0 0 1px var(--glass-edge) inset}
+html[data-skin=glass] .skill-chip{background:var(--glass-soft);box-shadow:var(--glass-top),0 0 0 1px var(--glass-edge) inset}
+html[data-skin=glass] .chat-bubble:not(.mine){background:var(--glass-card);box-shadow:var(--glass-top),0 0 0 1px var(--glass-edge) inset}
+html[data-skin=glass] nav.app-nav{background:rgba(255,255,255,.58);-webkit-backdrop-filter:blur(26px) saturate(1.7);backdrop-filter:blur(26px) saturate(1.7);box-shadow:0 12px 32px rgba(50,90,160,.2),0 0 0 1px rgba(255,255,255,.9) inset}
+html[data-skin=glass] nav.app-nav button{color:#4a5d7c}
+html[data-skin=glass] nav.app-nav button[aria-current=page]{background:rgba(56,86,126,.14);color:#1f3f6e}
+html[data-skin=glass][data-theme=dark] nav.app-nav{background:rgba(20,40,80,.5);box-shadow:0 12px 32px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.14) inset}
+html[data-skin=glass][data-theme=dark] nav.app-nav button{color:rgba(255,255,255,.66)}
+html[data-skin=glass][data-theme=dark] nav.app-nav button[aria-current=page]{background:rgba(212,175,55,.16);color:var(--gold)}
+html[data-skin=glass] .hero,html[data-skin=glass] .page-heading,html[data-skin=glass] .profile-intro{background:linear-gradient(150deg,rgba(11,26,54,.9),rgba(24,48,90,.78))}
+html[data-skin=glass] .scrim{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+}
+html[data-skin=glass] .admin-launch{border-left:4px solid var(--burgundy)}html[data-skin=glass] .next-card.alert{border-color:var(--gold)}html[data-skin=glass] .note-card.unread{border-color:var(--accent)}
+/* skin picker */
+.skin-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.skin-picker button{min-height:52px;flex-direction:column;gap:2px;font-size:.88rem}
+.skin-picker button[aria-pressed=true]{background:linear-gradient(180deg,var(--btn-a),var(--btn-b));color:#fff;box-shadow:0 0 0 3px var(--gold)}
 `;
