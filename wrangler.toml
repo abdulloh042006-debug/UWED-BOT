@@ -1,0 +1,19 @@
+# Cloudflare Workers config for UWED Talent Network (no secrets here).
+name = "uwed-talent-network"
+main = "worker/index.js"
+compatibility_date = "2026-10-01"
+
+# D1 database (binding name must stay "DB"). Migrations are applied by the worker at runtime.
+# database_id is filled in after the database is created in the Cloudflare dashboard.
+[[d1_databases]]
+binding = "DB"
+database_name = "uwed-talent-network"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# R2 bucket for private evidence files (binding name must stay "BUCKET").
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "uwed-evidence"
+
+# Secrets are NOT stored here. Add in dashboard: Worker > Settings > Variables and Secrets:
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, SESSION_SECRET, BOOTSTRAP_ADMIN_TELEGRAM_ID, MINIAPP_URL
