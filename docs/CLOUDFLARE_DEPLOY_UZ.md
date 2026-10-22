@@ -13,7 +13,7 @@ Yaratilgach **Database ID** ni nusxalang va `wrangler.toml` ichidagi `4ec98ce8-1
 
 ## 3. Worker'ni GitHub'dan ulash
 **Compute → Workers & Pages → Create → Import a repository** → `abdulloh042006-debug/UWED-BOT` → branch: `feature/claude-ui-v2` (yoki main'ga qo‘shilgandan keyin main).
-Build command bo‘sh, deploy command: `npx wrangler deploy`. Worker nomi `uwed-talent-network` bo‘lsin.
+Build command bo‘sh, deploy command: `npx wrangler deploy`. Worker nomi `uwed-bot` (wrangler.toml dagi `name` bilan bir xil) bo‘lsin.
 
 ## 4. Maxfiy qiymatlar (Worker → Settings → Variables and Secrets → Secret)
 | Nomi | Qiymat |

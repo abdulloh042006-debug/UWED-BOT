@@ -1,5 +1,5 @@
 # Cloudflare Workers config for UWED Talent Network (no secrets here).
-name = "uwed-talent-network"
+name = "uwed-bot"
 main = "worker/index.js"
 compatibility_date = "2026-10-01"
 
