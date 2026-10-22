@@ -21,12 +21,16 @@ async function actor(request, env) {
 }
 function publicProfile(r) { return { id: r.id, display_name: r.display_name, role: r.role, verified_university: !!r.verified_university, faculty: r.faculty, bio: r.bio, timezone: r.timezone, interests: parse(r.interests), languages: parse(r.languages), privacy: r.privacy, notify_bot: !!r.notify_bot, ai_consent:!!r.ai_consent, teach: parse(r.teach), learn: parse(r.learn) }; }
 async function profile(db, id) {
-  const p = await row(db, 'SELECT u.*,p.faculty,p.bio,p.timezone,p.interests,p.languages,p.privacy,p.notify_bot,p.ai_consent FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?', id);
+  const p = await row(db, 'SELECT u.*,p.faculty,p.bio,p.timezone,p.interests,p.languages,p.privacy,p.notify_bot,p.ai_consent,p.onboarded_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?', id);
   if (!p) return null;
-  const skills = await all(db, 'SELECT s.name,us.direction FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=? AND s.approved=1', id);
+  const skills = await all(db, 'SELECT s.id,s.name,us.direction FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=? AND s.approved=1', id);
   p.teach = JSON.stringify(skills.filter(x => x.direction === 'teach').map(x => x.name));
   p.learn = JSON.stringify(skills.filter(x => x.direction === 'learn').map(x => x.name));
-  return publicProfile(p);
+  const out = publicProfile(p);
+  out.onboarded = !!p.onboarded_at;
+  out.teach_items = skills.filter(x => x.direction === 'teach').map(x => ({ id: x.id, name: x.name }));
+  out.learn_items = skills.filter(x => x.direction === 'learn').map(x => ({ id: x.id, name: x.name }));
+  return out;
 }
 async function notify(db, userId, kind, body, target) {
   const id = randomId();
@@ -109,7 +113,7 @@ async function api(request, env, path, method) {
     const interests = b.interests.map(x => text(x,60));
     await env.DB.batch([
       env.DB.prepare('UPDATE users SET display_name=? WHERE id=?').bind(name,me.id),
-      env.DB.prepare('UPDATE profiles SET faculty=?,bio=?,interests=?,privacy=?,timezone=?,notify_bot=?,ai_consent=? WHERE user_id=?').bind(faculty,bio,JSON.stringify(interests),privacy,timezone,notifyBot?1:0,aiConsent?1:0,me.id)
+      env.DB.prepare('UPDATE profiles SET faculty=?,bio=?,interests=?,privacy=?,timezone=?,notify_bot=?,ai_consent=?,onboarded_at=COALESCE(onboarded_at,CASE WHEN ?=1 THEN CURRENT_TIMESTAMP END) WHERE user_id=?').bind(faculty,bio,JSON.stringify(interests),privacy,timezone,notifyBot?1:0,aiConsent?1:0,b.onboarded===true?1:0,me.id)
     ]);
     return json(await profile(env.DB,me.id));
   }
@@ -128,10 +132,18 @@ async function api(request, env, path, method) {
     if (!skill.approved) return json({ pending: true, message:'Ko‘nikma tasdiqlashga yuborildi' },202);
     return json({ ok:true },201);
   }
+  const skillRemoval=path.match(/^skills\/([^/]+)\/(teach|learn)$/);
+  if (skillRemoval && method==='DELETE') {
+    const changed=await run(env.DB,'DELETE FROM user_skills WHERE user_id=? AND skill_id=? AND direction=?',me.id,skillRemoval[1],skillRemoval[2]);
+    return changed.meta?.changes?json({ok:true}):fail(404,'skill','Ko‘nikma topilmadi');
+  }
   if (path === 'availability' && method === 'GET') return json({ items:await all(env.DB,'SELECT id,weekday,start_minute,end_minute FROM availability WHERE user_id=?',me.id) });
   if (path === 'availability' && method === 'POST') {
     const b=await request.json();
     if (![b.weekday,b.start_minute,b.end_minute].every(Number.isInteger) || b.weekday<0 || b.weekday>6 || b.start_minute<0 || b.end_minute>1440 || b.start_minute>=b.end_minute) return fail(400,'input','Vaqt oralig‘ini tekshiring');
+    const clash=await row(env.DB,'SELECT id FROM availability WHERE user_id=? AND weekday=? AND start_minute<? AND end_minute>?',me.id,b.weekday,b.end_minute,b.start_minute);
+    if (clash) return fail(409,'slot','Bu vaqt oralig‘i allaqachon qo‘shilgan');
+    if ((await row(env.DB,'SELECT count(*) AS n FROM availability WHERE user_id=?',me.id)).n>=56) return fail(400,'slot','Bo‘sh vaqtlar soni chegaradan oshdi');
     await run(env.DB,'INSERT INTO availability(id,user_id,weekday,start_minute,end_minute) VALUES(?,?,?,?,?)',randomId(),me.id,b.weekday,b.start_minute,b.end_minute);
     return json({ ok:true },201);
   }
@@ -140,7 +152,7 @@ async function api(request, env, path, method) {
     const changed=await run(env.DB,'DELETE FROM availability WHERE id=? AND user_id=?',availability[1],me.id);
     return changed.meta?.changes?json({ok:true}):fail(404,'slot','Vaqt topilmadi');
   }
-  if (path === 'mentors' && method==='GET') return json({items:await all(env.DB,"SELECT u.id,u.display_name,p.faculty,p.bio FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.role='mentor' AND u.suspended_at IS NULL AND p.privacy='public' ORDER BY u.display_name LIMIT 100")});
+  if (path === 'mentors' && method==='GET') return json({items:await all(env.DB,"SELECT u.id,u.display_name,p.faculty,p.bio,(SELECT count(*) FROM reviews r WHERE r.subject_id=u.id AND r.hidden_at IS NULL) AS rating_count,(SELECT round(avg(r.stars),1) FROM reviews r WHERE r.subject_id=u.id AND r.hidden_at IS NULL) AS rating_average,(SELECT group_concat(s.name,', ') FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=u.id AND us.direction='teach' AND s.approved=1) AS teach FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.role='mentor' AND u.suspended_at IS NULL AND p.privacy='public' ORDER BY rating_average IS NULL,rating_average DESC,u.display_name LIMIT 100")});
   if (path === 'matches' && method === 'GET') {
     const mine=await profile(env.DB,me.id), peers=await all(env.DB,"SELECT u.id FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id<>? AND u.suspended_at IS NULL AND p.privacy='public' LIMIT 100",me.id);
     const slots=await all(env.DB,'SELECT user_id,weekday,start_minute,end_minute FROM availability');
@@ -153,7 +165,7 @@ async function api(request, env, path, method) {
       const match=scoreMatch({...mine,slots:ranges(me.id)},{...other,slots:mine.timezone===other.timezone?ranges(p.id):[]});
       if (!match) continue;
       const skill=await row(env.DB,'SELECT id FROM skills WHERE name=? AND approved=1',match.teach[0] || match.reciprocal[0]);
-      if (skill) items.push({id:p.id,display_name:other.display_name,skill_id:skill.id,...match});
+      if (skill) items.push({id:p.id,display_name:other.display_name,skill_id:skill.id,mentor:other.role==='mentor',...match});
     }
     const q=(new URL(request.url)).searchParams.get('q')?.trim().toLocaleLowerCase()||'';
     return json({items:items.filter(x=>!q||x.display_name.toLocaleLowerCase().includes(q)||x.teach.some(s=>s.toLocaleLowerCase().includes(q))).sort((a,b)=>b.score-a.score)});
@@ -260,7 +272,18 @@ async function api(request, env, path, method) {
     await notify(env.DB,s.sender_id===me.id?s.recipient_id:s.sender_id,'session','Sessiya vaqti o‘zgartirishga yuborildi','sessions');
     return json({id:s.id,status:'proposed'});
   }
-  if (path === 'notifications' && method === 'GET') return json({items:await all(env.DB,'SELECT id,kind,body,target,read_at,created_at FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50',me.id)});
+  if (path === 'notifications' && method === 'GET') return json({items:await all(env.DB,'SELECT id,kind,body,target,read_at,created_at FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50',me.id),unread:(await row(env.DB,'SELECT count(*) AS n FROM notifications WHERE user_id=? AND read_at IS NULL',me.id)).n});
+  if (path === 'notifications/read' && method === 'POST') {
+    const changed=await run(env.DB,'UPDATE notifications SET read_at=CURRENT_TIMESTAMP WHERE user_id=? AND read_at IS NULL',me.id);
+    return json({ok:true,updated:changed.meta?.changes||0});
+  }
+  if (path === 'home' && method === 'GET') {
+    const now=new Date().toISOString();
+    const next=await row(env.DB,"SELECT s.start_at,sk.name AS skill_name,u.display_name AS other_name FROM sessions s JOIN exchange_requests er ON er.id=s.request_id JOIN skills sk ON sk.id=er.skill_id JOIN users u ON u.id=CASE WHEN er.sender_id=? THEN er.recipient_id ELSE er.sender_id END WHERE s.status='confirmed' AND s.start_at>? AND (er.sender_id=? OR er.recipient_id=?) ORDER BY s.start_at LIMIT 1",me.id,now,me.id,me.id);
+    const pending=await row(env.DB,"SELECT count(*) AS n FROM exchange_requests WHERE recipient_id=? AND status='sent'",me.id);
+    const unread=await row(env.DB,'SELECT count(*) AS n FROM notifications WHERE user_id=? AND read_at IS NULL',me.id);
+    return json({next_session:next||null,pending_requests:pending.n,unread_notifications:unread.n});
+  }
   if (path === 'verifications' && method === 'POST') {
     const isMultipart=/^multipart\/form-data(?:;|$)/i.test(request.headers.get('content-type')||'');
     const form=isMultipart?await request.formData():null;
