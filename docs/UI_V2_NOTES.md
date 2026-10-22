@@ -24,3 +24,11 @@ Presentation-only. No API, auth, DB or route changes. Telegram Mini App only.
 - Find partners: premium cards (skills, interests, bio, compatibility meter) with client-side sort and mentor filter.
 - Sessions grouped by state; profile split into sections with a completeness indicator.
 - `GET /matches` now also returns `faculty`, `bio`, `interests`, `their_teach`, `verified`.
+
+## v4 — Languages (O‘zbekcha / Русский / English)
+
+- All UI strings go through `T('<Uzbek source>')`; translations live in `worker/i18n.js` (client table, API error messages, bot texts, notification templates). A test fails if any `T()` string or server error lacks a Russian or English translation.
+- Language order: saved choice in the profile (`profiles.ui_lang`, migration 0009) → choice saved on the device → Telegram `language_code` (uz → O‘zbekcha, ru/kk/ky/tg/… → Русский, other → English).
+- Switch: Sozlamalar → Til, or the selector on the first onboarding screen. The choice is stored on the server so the bot, notifications and API errors (`x-ui-lang` header) use it too.
+- Bot: /start, /help, buttons and callback answers follow the user's language; command menus are registered for uz (default), ru and en.
+- Fixed: chat rate limits and the "existing conversation" check never worked on real D1 because `.first()` was not awaited.

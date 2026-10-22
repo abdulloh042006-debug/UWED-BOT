@@ -1,9 +1,11 @@
 import { randomId } from './core.js';
+import { msg } from './i18n.js';
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const fail=(status,code,message)=>json({error:{code,message}},status);
 const one=(db,q,...args)=>db.prepare(q).bind(...args).first();
 const all=async(db,q,...args)=>(await db.prepare(q).bind(...args).all()).results||[];
-const count=(db,q,...args)=>one(db,q,...args).n;
+// D1 .first() is async in production: always await counts.
+const count=async(db,q,...args)=>(await one(db,q,...args))?.n||0;
 const pairWhere='((sender_id=? AND recipient_id=?) OR (sender_id=? AND recipient_id=?))';
 async function peerFor(db,me,env,id){
   const p=await one(db,'SELECT u.id,u.display_name,u.suspended_at,p.faculty,p.privacy FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?',id);
@@ -12,7 +14,7 @@ async function peerFor(db,me,env,id){
     const owner=await one(db,'SELECT 1 AS yes FROM users WHERE id=? AND telegram_user_id=?',p.id,String(env.FULL_ADMIN_TELEGRAM_ID));
     if(owner)return null;
   }
-  const existed=count(db,'SELECT count(*) AS n FROM direct_messages WHERE '+pairWhere,me.id,p.id,p.id,me.id)>0;
+  const existed=await count(db,'SELECT count(*) AS n FROM direct_messages WHERE '+pairWhere,me.id,p.id,p.id,me.id)>0;
   if(p.privacy!=='public'&&!existed)return null;
   const block=await one(db,'SELECT blocker_id FROM direct_message_blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?) LIMIT 1',me.id,p.id,p.id,me.id);
   return {...p,existed,blocked_by_me:block?.blocker_id===me.id,blocked_by_them:block?.blocker_id===p.id};
@@ -72,15 +74,16 @@ export async function chats(request,env,path,method,me){
   if(typeof input!=='string')return fail(400,'body','Xabar matni kerak');
   const body=input.replace(/\r\n?/g,'\n').trim();
   if(!body||body.length>1500||/[\u0000-\u0009\u000B-\u001F\u007F]/.test(body))return fail(400,'body','Xabar 1–1500 belgidan iborat bo‘lishi kerak');
-  const hour=count(db,"SELECT count(*) AS n FROM direct_messages WHERE sender_id=? AND created_at>=datetime('now','-1 hour')",me.id);
+  const hour=await count(db,"SELECT count(*) AS n FROM direct_messages WHERE sender_id=? AND created_at>=datetime('now','-1 hour')",me.id);
   if(hour>=120)return fail(429,'rate','Bir soatdagi xabarlar limiti tugadi');
-  const burst=count(db,"SELECT count(*) AS n FROM direct_messages WHERE sender_id=? AND recipient_id=? AND created_at>=datetime('now','-10 seconds')",me.id,p.id);
+  const burst=await count(db,"SELECT count(*) AS n FROM direct_messages WHERE sender_id=? AND recipient_id=? AND created_at>=datetime('now','-10 seconds')",me.id,p.id);
   if(burst>=5)return fail(429,'rate','Xabarlarni sekinroq yuboring');
   const id=randomId(),notification=randomId();
   const preview=body.length>100?body.slice(0,100)+'…':body;
+  const lang=(await one(db,'SELECT ui_lang FROM profiles WHERE user_id=?',p.id))?.ui_lang||'uz';
   await db.batch([
     db.prepare('INSERT INTO direct_messages(id,sender_id,recipient_id,body) VALUES(?,?,?,?)').bind(id,me.id,p.id,body),
-    db.prepare('INSERT INTO notifications(id,user_id,kind,body,target) VALUES(?,?,?,?,?)').bind(notification,p.id,'chat',me.display_name+' sizga xabar yozdi:\n'+preview,'chat:'+me.id),
+    db.prepare('INSERT INTO notifications(id,user_id,kind,body,target) VALUES(?,?,?,?,?)').bind(notification,p.id,'chat',msg(lang,'n_chat',{name:me.display_name,preview}),'chat:'+me.id),
     db.prepare('INSERT INTO bot_outbox(id,notification_id) VALUES(?,?)').bind(randomId(),notification)
   ]);
   return json({id,queued:1},201);

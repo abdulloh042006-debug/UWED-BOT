@@ -118,7 +118,7 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}select{color-sc
 .toggle{display:inline-flex;align-items:center;gap:var(--space-2);min-height:var(--target-min);padding:0 var(--space-3);border:1px solid var(--border-strong);border-radius:var(--radius-md);background:transparent;color:var(--text-primary);font-size:var(--fs-sm);font-weight:500}
 .toggle[aria-pressed=true]{background:var(--action-secondary);border-color:var(--action-primary)}
 .toggle[aria-pressed=true]::before{content:"✓";font-weight:700;color:var(--action-primary)}
-.note-card{position:relative}.note-card.unread{background:var(--surface-subtle)}.note-card.unread::before{content:"Yangi";display:table;margin-bottom:var(--space-2);padding:0 var(--space-2);border-radius:var(--radius-pill);background:var(--action-primary);color:var(--on-action-primary);font-size:var(--fs-caption);font-weight:600}
+.note-card{position:relative}.note-card.unread{background:var(--surface-subtle)}.note-card.unread::before{content:attr(data-new);display:table;margin-bottom:var(--space-2);padding:0 var(--space-2);border-radius:var(--radius-pill);background:var(--action-primary);color:var(--on-action-primary);font-size:var(--fs-caption);font-weight:600}
 .note-time{display:block;margin-top:var(--space-2)}
 
 /* profile */
@@ -208,7 +208,7 @@ body>p.error[role=status]{background:var(--status-danger-surface);color:var(--st
 /* navigation: bottom tab bar on phones, side rail on wide screens */
 nav.app-nav{position:fixed;z-index:100;left:0;right:0;bottom:0;display:flex;padding:var(--space-1) max(var(--space-1),env(safe-area-inset-right)) calc(var(--space-1) + env(safe-area-inset-bottom)) max(var(--space-1),env(safe-area-inset-left));background:var(--surface);border-top:1px solid var(--border)}
 nav.app-nav button{position:relative;flex:1 1 0;min-width:0;min-height:52px;padding:var(--space-1) 2px;flex-direction:column;gap:2px;border-radius:var(--radius-md);background:transparent;color:var(--text-muted);font-size:var(--fs-caption);font-weight:600;line-height:16px;white-space:nowrap}
-nav.app-nav .ui-icon{width:22px;height:22px}
+nav.app-nav .ui-icon{width:22px;height:22px}nav.app-nav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 @media(hover:hover){nav.app-nav button:hover:not(:disabled){background:var(--surface-subtle);color:var(--text-primary)}}
 nav.app-nav button[aria-current=page]{color:var(--action-primary)}
 nav.app-nav button[aria-current=page]::before{content:"";position:absolute;top:-5px;left:30%;right:30%;height:3px;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--action-primary)}
@@ -237,7 +237,7 @@ nav.app-nav button[aria-current=page]{font-weight:700}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
-@media(max-width:360px){nav.app-nav button{font-size:11px;letter-spacing:-.01em}main{padding-left:var(--space-3);padding-right:var(--space-3)}}
+@media(max-width:360px){nav.app-nav button{font-size:10.5px;letter-spacing:-.02em;padding-left:0;padding-right:0}main{padding-left:var(--space-3);padding-right:var(--space-3)}}
 /* breakpoints: tablet (768) and desktop (900): side rail + wider content */
 @media(min-width:768px){:root{--fs-h1:40px;--lh-h1:46px}.card{padding:var(--space-6)}.cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-tabs{flex-wrap:wrap}main{max-width:960px}}
 @media(min-width:900px){

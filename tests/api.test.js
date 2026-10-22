@@ -478,3 +478,78 @@ test('first-time users land on the onboarding wizard and finish into the dashboa
  await click({onb:'finish'});await wait('Nimadan boshlaymiz');assert.match(root.innerHTML,/class="app-nav"/);
  assert.equal((await x.call('/api/v1/me','GET',undefined,cookie)).data.onboarded,true);
 });
+
+/* ---------------- languages (uz / ru / en) ---------------- */
+import { readFileSync } from 'node:fs';
+import { clientTable, serverErrorTable, translateError, msg, LANGS } from '../worker/i18n.js';
+const placeholders=s=>[...String(s).matchAll(/\{(\w+)\}/g)].map(m=>m[1]).sort().join(',');
+test('every client string has Russian and English translations with the same placeholders',()=>{
+ const table=new Map(clientTable.map(([uz,ru,en])=>[uz,{ru,en}]));
+ const keys=new Set();
+ for(const f of ['worker/ui.js','worker/admin-ui.js'])for(const m of readFileSync(f,'utf8').matchAll(/\bT\('((?:[^'\\]|\\.)*)'/g))keys.add(m[1]);
+ assert.ok(keys.size>300,'expected the UI to be fully wrapped in T()');
+ const missing=[...keys].filter(k=>!table.get(k)?.ru||!table.get(k)?.en);
+ assert.deepEqual(missing,[],'untranslated client strings');
+ for(const [uz,{ru,en}] of table){assert.equal(placeholders(ru),placeholders(uz),'ru placeholders: '+uz);assert.equal(placeholders(en),placeholders(uz),'en placeholders: '+uz)}
+});
+test('every server error message is translated',()=>{
+ const messages=new Set();
+ for(const f of ['index.js','chat.js','teams.js','admin.js'])for(const m of readFileSync('worker/'+f,'utf8').matchAll(/fail\(\d+,'[\w-]+','([^']+)'\)/g))messages.add(m[1]);
+ const untranslated=[...messages].filter(m=>translateError('ru',m)===m||translateError('en',m)===m);
+ assert.deepEqual(untranslated,[]);
+ assert.ok(serverErrorTable.every(r=>r.length===3));
+});
+test('profile stores the interface language and API errors follow x-ui-lang',async()=>{
+ const x=setup(),a=await x.login(611);
+ const base={display_name:'Ali',faculty:'',bio:'',interests:[]};
+ assert.equal((await x.call('/api/v1/me','GET',undefined,a)).data.ui_lang,null);
+ assert.equal((await x.call('/api/v1/me','PATCH',{...base,ui_lang:'ru'},a)).status,200);
+ assert.equal((await x.call('/api/v1/me','GET',undefined,a)).data.ui_lang,'ru');
+ assert.equal((await x.call('/api/v1/me','PATCH',{...base,ui_lang:'de'},a)).status,400);
+ const bad=await x.call('/api/v1/me','PATCH',{display_name:'',interests:[]},a,{'x-ui-lang':'ru'});
+ assert.equal(bad.status,400);assert.equal(bad.data.error.message,'Проверьте данные профиля');
+ const en=await x.call('/api/v1/me','PATCH',{display_name:'',interests:[]},a,{'x-ui-lang':'en'});
+ assert.equal(en.data.error.message,'Check your profile details');
+ const uz=await x.call('/api/v1/me','PATCH',{display_name:'',interests:[]},a);
+ assert.equal(uz.data.error.message,'Profil ma’lumotlarini tekshiring');
+});
+test('bot replies in the user language: Telegram language first, then the saved profile language',async()=>{
+ const x=setup(),old=globalThis.fetch,sent=[];globalThis.fetch=async(url,init)=>{if(String(url).includes('sendMessage'))sent.push(JSON.parse(init.body));return new Response('{}',{status:200})};
+ const h={'X-Telegram-Bot-Api-Secret-Token':'hook-secret'};
+ try{
+  const send=(id,from,text)=>x.call('/api/v1/bot/webhook','POST',{update_id:id,message:{text,chat:{id:from.id,type:'private'},from}},'',h);
+  await send(71,{id:5501,first_name:'Ivan',language_code:'ru'},'/start');
+  assert.match(sent.at(-1).text,/^Здравствуйте, Ivan!/);assert.equal(sent.at(-1).reply_markup.inline_keyboard[0][0].text,'Открыть приложение');
+  await send(72,{id:5502,first_name:'Ann',language_code:'en-GB'},'/help');
+  assert.match(sent.at(-1).text,/Commands:/);
+  await send(73,{id:5503,first_name:'Aziz'},'/start');
+  assert.match(sent.at(-1).text,/^Assalomu alaykum, Aziz!/);
+  const user=await x.login(5504);
+  await x.call('/api/v1/me','PATCH',{display_name:'Lena',faculty:'',bio:'',interests:[],ui_lang:'en'},user);
+  await send(74,{id:5504,first_name:'Lena',language_code:'ru'},'/start');
+  assert.match(sent.at(-1).text,/^Hello, Lena!/,'saved profile language wins over Telegram language');
+ }finally{globalThis.fetch=old}
+});
+test('notifications are written in the recipient language',async()=>{
+ const x=setup(),a=await x.login(621),b=await x.login(622);
+ await x.call('/api/v1/me','PATCH',{display_name:'Bob',faculty:'',bio:'',interests:[],ui_lang:'ru'},b);
+ const bob=(await x.call('/api/v1/me','GET',undefined,b)).data.id;
+ assert.equal((await x.call('/api/v1/chat/'+bob,'POST',{body:'Привет!'},a)).status,201);
+ const notes=(await x.call('/api/v1/notifications','GET',undefined,b)).data.items;
+ assert.match(notes[0].body,/написал\(а\) вам:\nПривет!/);
+ assert.equal(msg('en','n_invite',{name:'A',skill:'IELTS'}),'A sent you an invitation for IELTS');
+ assert.deepEqual(LANGS,['uz','ru','en']);
+});
+test('client picks the Telegram language on first launch, saves it and renders translated screens',async()=>{
+ const x=setup(),root={innerHTML:'',handlers:{},querySelector(){return null},addEventListener(name,fn){this.handlers[name]=fn},prepend(){}},initData=await signed(778);let cookie='';
+ const browserFetch=async(path,options={})=>{const headers={...options.headers};if(cookie)headers.cookie=cookie;const response=await worker.fetch(new Request(base+path,{method:options.method||'GET',headers,body:options.body}),x.env);if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response};
+ new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,initDataUnsafe:{user:{language_code:'ru'}},ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,console});
+ const wait=async expected=>{for(let i=0;i<100;i++){if(root.innerHTML.includes(expected))return;await new Promise(resolve=>setTimeout(resolve,10))}assert.fail('Client did not render '+expected+': '+root.innerHTML.slice(0,300))};
+ await wait('Добро пожаловать');
+ assert.equal((await x.call('/api/v1/me','GET',undefined,cookie)).data.ui_lang,'ru','detected language is stored for the bot');
+ const click=data=>root.handlers.click({target:{closest:()=>({dataset:data,disabled:false})}});
+ await click({langPick:'en'});await wait('Welcome!');
+ assert.equal((await x.call('/api/v1/me','GET',undefined,cookie)).data.ui_lang,'en');
+ await click({onb:'next'});await click({onb:'next'});await click({onb:'finish'});await wait('Where to start?');
+ assert.match(root.innerHTML,/>Matches</);
+});

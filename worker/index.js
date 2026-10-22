@@ -5,6 +5,7 @@ import { chats } from './chat.js';
 import { protectedTier, adminTier, isTopAdmin } from './admin-access.js';
 import { admin } from './admin.js';
 import { ensureMigrations } from './migrations.js';
+import { normLang, langFromCode, translateError, msg, statusWord, matchReason, botCommands as localizedCommands } from './i18n.js';
 
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers } });
 const fail = (status, code, message) => json({ error: { code, message } }, status);
@@ -21,19 +22,21 @@ async function actor(request, env) {
 }
 function publicProfile(r) { return { id: r.id, display_name: r.display_name, role: r.role, verified_university: !!r.verified_university, faculty: r.faculty, bio: r.bio, timezone: r.timezone, interests: parse(r.interests), languages: parse(r.languages), privacy: r.privacy, notify_bot: !!r.notify_bot, ai_consent:!!r.ai_consent, teach: parse(r.teach), learn: parse(r.learn) }; }
 async function profile(db, id) {
-  const p = await row(db, 'SELECT u.*,p.faculty,p.bio,p.timezone,p.interests,p.languages,p.privacy,p.notify_bot,p.ai_consent,p.onboarded_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?', id);
+  const p = await row(db, 'SELECT u.*,p.faculty,p.bio,p.timezone,p.interests,p.languages,p.privacy,p.notify_bot,p.ai_consent,p.onboarded_at,p.ui_lang FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?', id);
   if (!p) return null;
   const skills = await all(db, 'SELECT s.id,s.name,us.direction FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=? AND s.approved=1', id);
   p.teach = JSON.stringify(skills.filter(x => x.direction === 'teach').map(x => x.name));
   p.learn = JSON.stringify(skills.filter(x => x.direction === 'learn').map(x => x.name));
   const out = publicProfile(p);
   out.onboarded = !!p.onboarded_at;
+  out.ui_lang = normLang(p.ui_lang);
   out.teach_items = skills.filter(x => x.direction === 'teach').map(x => ({ id: x.id, name: x.name }));
   out.learn_items = skills.filter(x => x.direction === 'learn').map(x => ({ id: x.id, name: x.name }));
   return out;
 }
 async function notify(db, userId, kind, body, target) {
   const id = randomId();
+  if (typeof body === 'function') body = body((await row(db, 'SELECT ui_lang FROM profiles WHERE user_id=?', userId))?.ui_lang || 'uz');
   await db.batch([
     db.prepare('INSERT INTO notifications(id,user_id,kind,body,target) VALUES(?,?,?,?,?)').bind(id,userId,kind,body,target),
     db.prepare('INSERT INTO bot_outbox(id,notification_id) VALUES(?,?)').bind(randomId(),id)
@@ -48,7 +51,7 @@ async function changeExchange(db, r, action, user) {
     db.prepare("UPDATE sessions SET status='cancelled' WHERE request_id=? AND status IN ('proposed','confirmed') AND EXISTS(SELECT 1 FROM exchange_requests WHERE id=? AND status='cancelled')").bind(r.id,r.id)
   ]))[0] : await run(db,'UPDATE exchange_requests SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status=?',next,r.id,r.status);
   if (!changed.meta?.changes) throw Error('changed');
-  await notify(db,r.sender_id===user.id?r.recipient_id:r.sender_id,'exchange',`${user.display_name}: so‘rov holati ${next}`,'sessions');
+  await notify(db,r.sender_id===user.id?r.recipient_id:r.sender_id,'exchange',l=>msg(l,'n_status',{name:user.display_name,status:statusWord(l,next)}),'sessions');
   return next;
 }
 async function api(request, env, path, method) {
@@ -107,13 +110,14 @@ async function api(request, env, path, method) {
     const b = await request.json();
     const name = text(b.display_name,100), faculty = text(b.faculty || '',100), bio = text(b.bio || '',500);
     if (!name || !Array.isArray(b.interests) || b.interests.length > 20) return fail(400,'input','Profil ma’lumotlarini tekshiring');
-    const current=await profile(env.DB,me.id),privacy=b.privacy??current.privacy,timezone=b.timezone??current.timezone,notifyBot=b.notify_bot??current.notify_bot,aiConsent=b.ai_consent??current.ai_consent;
+    const current=await profile(env.DB,me.id),privacy=b.privacy??current.privacy,timezone=b.timezone??current.timezone,notifyBot=b.notify_bot??current.notify_bot,aiConsent=b.ai_consent??current.ai_consent,uiLang=b.ui_lang===undefined?current.ui_lang:normLang(b.ui_lang);
+    if (b.ui_lang!==undefined && !uiLang) return fail(400,'input','Sozlamalarni tekshiring');
     if (!['public','members','private'].includes(privacy) || typeof timezone!=='string' || timezone.length>60 || ![true,false].includes(notifyBot) || ![true,false].includes(aiConsent)) return fail(400,'input','Sozlamalarni tekshiring');
     try { new Intl.DateTimeFormat('en',{timeZone:timezone}); } catch { return fail(400,'timezone','Vaqt mintaqasi noto‘g‘ri'); }
     const interests = b.interests.map(x => text(x,60));
     await env.DB.batch([
       env.DB.prepare('UPDATE users SET display_name=? WHERE id=?').bind(name,me.id),
-      env.DB.prepare('UPDATE profiles SET faculty=?,bio=?,interests=?,privacy=?,timezone=?,notify_bot=?,ai_consent=?,onboarded_at=COALESCE(onboarded_at,CASE WHEN ?=1 THEN CURRENT_TIMESTAMP END) WHERE user_id=?').bind(faculty,bio,JSON.stringify(interests),privacy,timezone,notifyBot?1:0,aiConsent?1:0,b.onboarded===true?1:0,me.id)
+      env.DB.prepare('UPDATE profiles SET faculty=?,bio=?,interests=?,privacy=?,timezone=?,notify_bot=?,ai_consent=?,ui_lang=?,onboarded_at=COALESCE(onboarded_at,CASE WHEN ?=1 THEN CURRENT_TIMESTAMP END) WHERE user_id=?').bind(faculty,bio,JSON.stringify(interests),privacy,timezone,notifyBot?1:0,aiConsent?1:0,uiLang,b.onboarded===true?1:0,me.id)
     ]);
     return json(await profile(env.DB,me.id));
   }
@@ -176,10 +180,11 @@ async function api(request, env, path, method) {
     if (!other || other.id===me.id || other.privacy!=='public') return fail(404,'match','Moslik topilmadi');
     const match=scoreMatch(mine,other);
     if (!match) return fail(404,'match','Moslik topilmadi');
-    const fallback={score:match.score,explanation:match.reason,source:'rules'};
+    const lang=normLang(request.headers.get('x-ui-lang'))||mine.ui_lang||'uz';
+    const fallback={score:match.score,explanation:matchReason(lang,match),source:'rules'};
     if (!mine.ai_consent || !env.GEMINI_API_KEY || !env.GEMINI_MODEL) return json(fallback);
     if (!/^[a-zA-Z0-9._-]{3,80}$/.test(env.GEMINI_MODEL)) return json(fallback);
-    const input=JSON.stringify({teach:match.teach,reciprocal:match.reciprocal,interests:match.sharedInterests,sharedTime:match.sharedTime,score:match.score});
+    const input=JSON.stringify({teach:match.teach,reciprocal:match.reciprocal,interests:match.sharedInterests,sharedTime:match.sharedTime,score:match.score,lang});
     const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input)))].map(x=>x.toString(16).padStart(2,'0')).join('');
     const cached=await row(env.DB,'SELECT explanation FROM ai_match_cache WHERE user_id=? AND peer_id=? AND input_hash=? AND created_at>datetime(\'now\',\'-1 day\')',me.id,other.id,hash);
     if (cached) return json({score:match.score,explanation:cached.explanation,source:'gemini-cache',reason:match.reason});
@@ -188,7 +193,7 @@ async function api(request, env, path, method) {
     const quota=await run(env.DB,'UPDATE ai_daily_usage SET count=count+1 WHERE user_id=? AND day=? AND count<5',me.id,day);
     if (!quota.meta?.changes) return json(fallback);
     try {
-      const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify({contents:[{parts:[{text:`O‘zbekcha 1–2 jumla yozing: faqat berilgan ko‘nikma va umumiy qiziqishlarga tayangan holda hamkorlik g‘oyasi. Yangi fakt, sertifikat, reyting yoki foiz to‘qimang. Ma’lumot: ${input}`}]}],generationConfig:{maxOutputTokens:150,temperature:0.3}}),signal:AbortSignal.timeout(4000)});
+      const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify({contents:[{parts:[{text:`${msg(lang,'ai_prompt')}: faqat berilgan ko‘nikma va umumiy qiziqishlarga tayangan holda hamkorlik g‘oyasi. Yangi fakt, sertifikat, reyting yoki foiz to‘qimang. Ma’lumot: ${input}`}]}],generationConfig:{maxOutputTokens:150,temperature:0.3}}),signal:AbortSignal.timeout(4000)});
       if (!response.ok) return json(fallback);
       const data=await response.json(),explanation=String(data.candidates?.[0]?.content?.parts?.[0]?.text||'').trim().slice(0,500);
       if (!explanation) return json(fallback);
@@ -208,7 +213,7 @@ async function api(request, env, path, method) {
     const id=randomId();
     try { await run(env.DB,'INSERT INTO exchange_requests(id,sender_id,recipient_id,skill_id) VALUES(?,?,?,?)',id,me.id,recipient.id,skill.id); }
     catch { return fail(409,'duplicate','Bu taklif allaqachon yuborilgan'); }
-    await notify(env.DB,recipient.id,'exchange',`${me.display_name} sizga ${skill.name} bo‘yicha taklif yubordi`,'sessions:'+id);
+    await notify(env.DB,recipient.id,'exchange',l=>msg(l,'n_invite',{name:me.display_name,skill:skill.name}),'sessions:'+id);
     return json({id,status:'sent'},201);
   }
   if (path === 'exchange-requests' && method === 'GET') {
@@ -243,7 +248,7 @@ async function api(request, env, path, method) {
     if (existing) return fail(409,'duplicate','Vaqt allaqachon taklif qilingan');
     const id=randomId();
     await run(env.DB,'INSERT INTO sessions(id,request_id,start_at,end_at,proposed_by) VALUES(?,?,?,?,?)',id,r.id,start,end,me.id);
-    await notify(env.DB,r.sender_id===me.id?r.recipient_id:r.sender_id,'session','Yangi sessiya vaqti taklif qilindi','sessions');
+    await notify(env.DB,r.sender_id===me.id?r.recipient_id:r.sender_id,'session',l=>msg(l,'n_time_proposed'),'sessions');
     return json({id,status:'proposed'},201);
   }
   const confirm=path.match(/^sessions\/([^/]+)\/confirm$/);
@@ -257,7 +262,7 @@ async function api(request, env, path, method) {
     ]);
     const changed=results[0];
     if (!changed.meta?.changes) return fail(409,'conflict','Bu vaqtda boshqa sessiya bor yoki sessiya o‘zgargan');
-    await notify(env.DB,s.proposed_by,'session','Sessiya vaqti tasdiqlandi','sessions');
+    await notify(env.DB,s.proposed_by,'session',l=>msg(l,'n_time_confirmed'),'sessions');
     return json({id:s.id,status:'confirmed'});
   }
   const reschedule=path.match(/^sessions\/([^/]+)\/reschedule$/);
@@ -269,7 +274,7 @@ async function api(request, env, path, method) {
     if (Date.parse(start)<Date.now() || Date.parse(end)-Date.parse(start)<15*60000 || Date.parse(end)-Date.parse(start)>4*3600000) return fail(400,'time','Vaqtni tekshiring');
     const results=await env.DB.batch([env.DB.prepare("UPDATE sessions SET start_at=?,end_at=?,proposed_by=?,confirmed_by=NULL,status='proposed' WHERE id=? AND status='confirmed' AND EXISTS(SELECT 1 FROM exchange_requests WHERE id=? AND status='scheduled')").bind(start,end,me.id,s.id,s.request_id),env.DB.prepare("UPDATE exchange_requests SET status='accepted' WHERE id=? AND status='scheduled' AND EXISTS(SELECT 1 FROM sessions WHERE id=? AND status='proposed')").bind(s.request_id,s.id)]);
     if (!results[0].meta?.changes) return fail(409,'state','Sessiya o‘zgargan');
-    await notify(env.DB,s.sender_id===me.id?s.recipient_id:s.sender_id,'session','Sessiya vaqti o‘zgartirishga yuborildi','sessions');
+    await notify(env.DB,s.sender_id===me.id?s.recipient_id:s.sender_id,'session',l=>msg(l,'n_time_changed'),'sessions');
     return json({id:s.id,status:'proposed'});
   }
   if (path === 'notifications' && method === 'GET') return json({items:await all(env.DB,'SELECT id,kind,body,target,read_at,created_at FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50',me.id),unread:(await row(env.DB,'SELECT count(*) AS n FROM notifications WHERE user_id=? AND read_at IS NULL',me.id)).n});
@@ -356,7 +361,7 @@ async function api(request, env, path, method) {
     if (b.decision==='approve' && v.kind==='university') await run(env.DB,'UPDATE users SET verified_university=1 WHERE id=?',v.user_id);
     if (b.decision==='approve' && v.kind==='mentor') await run(env.DB,"UPDATE users SET role='mentor' WHERE id=? AND role='student'",v.user_id);
     await run(env.DB,'INSERT INTO audit_log(id,actor_id,action,object_type,object_id) VALUES(?,?,?,?,?)',randomId(),me.id,b.decision,'verification',v.id);
-    await notify(env.DB,v.user_id,'moderation',`Arizangiz ${b.decision==='approve'?'tasdiqlandi':'rad etildi'}`,'profile');
+    await notify(env.DB,v.user_id,'moderation',l=>msg(l,'n_verification',{result:statusWord(l,b.decision==='approve'?'approved':'declined')}),'profile');
     return json({ok:true});
   }
   return fail(404,'route','Sahifa topilmadi');
@@ -368,7 +373,7 @@ async function telegram(env, method, payload) {
 }
 async function flushOutbox(env) {
   if (!env.DB || !env.TELEGRAM_BOT_TOKEN) return;
-  const jobs=await all(env.DB,`SELECT o.id,o.attempts,n.body,n.target,u.telegram_user_id,p.notify_bot FROM bot_outbox o JOIN notifications n ON n.id=o.notification_id JOIN users u ON u.id=n.user_id JOIN profiles p ON p.user_id=u.id WHERE o.status IN ('pending','sending') AND o.next_attempt_at<=CURRENT_TIMESTAMP ORDER BY n.created_at LIMIT 5`);
+  const jobs=await all(env.DB,`SELECT o.id,o.attempts,n.body,n.target,u.telegram_user_id,p.notify_bot,p.ui_lang FROM bot_outbox o JOIN notifications n ON n.id=o.notification_id JOIN users u ON u.id=n.user_id JOIN profiles p ON p.user_id=u.id WHERE o.status IN ('pending','sending') AND o.next_attempt_at<=CURRENT_TIMESTAMP ORDER BY n.created_at LIMIT 5`);
   for (const job of jobs) {
     const claimed=await run(env.DB,"UPDATE bot_outbox SET status='sending',next_attempt_at=datetime('now','+2 minutes') WHERE id=? AND status IN ('pending','sending') AND next_attempt_at<=CURRENT_TIMESTAMP",job.id);
     if (!claimed.meta?.changes) continue;
@@ -377,7 +382,7 @@ async function flushOutbox(env) {
       const payload={chat_id:job.telegram_user_id,text:job.body};
       if(job.target.startsWith('sessions:')){
         const id=job.target.slice(9),r=await row(env.DB,"SELECT status,created_at FROM exchange_requests WHERE id=?",id);
-        if(r?.status==='sent' && Date.now()-Date.parse(r.created_at.replace(' ','T')+'Z')<48*3600000)payload.reply_markup={inline_keyboard:[[{text:'Qabul qilish',callback_data:'ex:accept:'+id},{text:'Rad etish',callback_data:'ex:reject:'+id}],[{text:'Ilovani ochish',web_app:{url:env.MINIAPP_URL}}]]};
+        if(r?.status==='sent' && Date.now()-Date.parse(r.created_at.replace(' ','T')+'Z')<48*3600000){const l=job.ui_lang||'uz';payload.reply_markup={inline_keyboard:[[{text:msg(l,'btn_accept'),callback_data:'ex:accept:'+id},{text:msg(l,'btn_reject'),callback_data:'ex:reject:'+id}],[{text:msg(l,'btn_open'),web_app:{url:env.MINIAPP_URL}}]]}};
       }
       await telegram(env,'sendMessage',payload);await run(env.DB,"UPDATE bot_outbox SET status='sent',attempts=attempts+1 WHERE id=?",job.id);
     }
@@ -385,7 +390,6 @@ async function flushOutbox(env) {
   }
 }
 let commandsSet=false;
-const botCommands=[{command:'start',description:'Boshlash'},{command:'matches',description:'Mos sheriklar'},{command:'sessions',description:'Sessiyalar'},{command:'messages',description:'Xabarlar'},{command:'profile',description:'Profil'},{command:'settings',description:'Sozlamalar'},{command:'help',description:'Yordam'}];
 async function webhook(request, env) {
   if (!env.DB || !env.TELEGRAM_WEBHOOK_SECRET || !env.TELEGRAM_BOT_TOKEN) return fail(503,'config','Xizmat sozlanmagan');
   if (request.headers.get('X-Telegram-Bot-Api-Secret-Token')!==env.TELEGRAM_WEBHOOK_SECRET) return fail(403,'webhook','Ruxsat yo‘q');
@@ -397,15 +401,16 @@ async function webhook(request, env) {
   const callback=update.callback_query;
   if (callback) {
     const match=String(callback.data||'').match(/^ex:(accept|reject):([a-f0-9-]{36})$/i);
-    let answer='So‘rov eskirgan yoki ruxsat yo‘q';
+    let cbLang=langFromCode(callback.from?.language_code),answerKey='cb_stale';
     if (match && Number.isSafeInteger(callback.from?.id)) {
-      const user=await row(env.DB,'SELECT * FROM users WHERE telegram_user_id=?',String(callback.from.id));
+      const user=await row(env.DB,'SELECT u.*,p.ui_lang FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.telegram_user_id=?',String(callback.from.id));
+      if (user?.ui_lang) cbLang=normLang(user.ui_lang)||cbLang;
       const r=await row(env.DB,'SELECT * FROM exchange_requests WHERE id=?',match[2]);
       if (user && !user.suspended_at && r && r.recipient_id===user.id && r.status==='sent' && Date.now()-Date.parse(r.created_at.replace(' ','T')+'Z')<48*3600000) {
-        try { await changeExchange(env.DB,r,match[1],user);answer=match[1]==='accept'?'Taklif qabul qilindi':'Taklif rad etildi'; } catch { answer='So‘rov allaqachon o‘zgargan'; }
+        try { await changeExchange(env.DB,r,match[1],user);answerKey=match[1]==='accept'?'cb_accepted':'cb_rejected'; } catch { answerKey='cb_changed'; }
       }
     }
-    try { await telegram(env,'answerCallbackQuery',{callback_query_id:callback.id,text:answer,show_alert:false}); }
+    try { await telegram(env,'answerCallbackQuery',{callback_query_id:callback.id,text:msg(cbLang,answerKey),show_alert:false}); }
     catch(e){await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id));throw e}
   }
   if (chat && message.chat.type==='private') {
@@ -417,23 +422,24 @@ async function webhook(request, env) {
     const open=screen=>{const u=new URL(url.toString());if(screen)u.searchParams.set('screen',screen);return {web_app:{url:u.toString()}}};
     // All entry routes use the same Web App; route hints are not identity.
     const first=String(message.from?.first_name||'').trim().slice(0,40);
-    let text,keyboard=[[{text:'Ilovani ochish',...open(route)}]];
-    if (command==='/help') text='UWED Talent Network: profilni to‘ldiring, mos sheriklarni toping va bilim almashish sessiyalarini boshqaring.\n\nBuyruqlar:\n/start — boshlash\n/matches — mos sheriklar\n/sessions — sessiyalar\n/messages — xabarlar\n/profile — profil\n/settings — sozlamalar';
+    const known=Number.isSafeInteger(message.from?.id)?await row(env.DB,'SELECT p.ui_lang FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.telegram_user_id=?',String(message.from.id)):null;
+    const lang=normLang(known?.ui_lang)||langFromCode(message.from?.language_code);
+    let text,keyboard=[[{text:msg(lang,'btn_open'),...open(route)}]];
+    if (command==='/help') text=msg(lang,'help');
     else if (command==='/start') {
-      text='Assalomu alaykum'+(first?', '+first:'')+'! UWED Talent Network platformasiga xush kelibsiz.\nBilim almashing, mentorlar bilan bog‘laning, loyiha jamoalarini toping va yutuqlaringizni portfolio orqali ko‘rsating.';
-      keyboard=[[{text:'Ilovani ochish',...open('')}],[{text:'Mos sheriklar',...open('matches')},{text:'Sessiyalar',...open('sessions')}],[{text:'Profil',...open('profile')},{text:'Sozlamalar',...open('settings')}]];
+      text=msg(lang,'start',{name:first?', '+first:''});
+      keyboard=[[{text:msg(lang,'btn_open'),...open('')}],[{text:msg(lang,'btn_matches'),...open('matches')},{text:msg(lang,'btn_sessions'),...open('sessions')}],[{text:msg(lang,'btn_profile'),...open('profile')},{text:msg(lang,'btn_settings'),...open('settings')}]];
     }
-    else if (route!==undefined && command) text='UWED Talent Network ilovasini oching:';
-    else if (command) text='Bu buyruq tanilmadi. /help — barcha buyruqlar.';
-    else text='Men faqat ilovaga yo‘l ko‘rsataman. Davom etish uchun “Ilovani ochish” tugmasini bosing yoki /help yuboring.';
+    else if (route!==undefined && command) text=msg(lang,'open_prompt');
+    else if (command) text=msg(lang,'unknown_command');
+    else text=msg(lang,'plain_text');
     try { await telegram(env,'sendMessage',{chat_id:chat,text,reply_markup:{inline_keyboard:keyboard}}); }
     catch (e) { await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id)); throw e; }
   }
   return json({ok:true});
 }
 
-export default {
-  async fetch(request, env, ctx) {
+async function handle(request, env, ctx) {
     const url=new URL(request.url), path=url.pathname, method=request.method;
     try {
       if (env.DB && (path.startsWith('/api/v1/') || path==='/api/v1/bot/webhook')) {
@@ -443,7 +449,7 @@ export default {
       if (path==='/api/v1/bot/webhook' && method==='POST') {
         const result=await webhook(request,env);
         if (ctx?.waitUntil && env.DB && result.status<500) ctx.waitUntil(flushOutbox(env));
-        if (ctx?.waitUntil && !commandsSet && result.status<300 && env.TELEGRAM_BOT_TOKEN) {commandsSet=true;ctx.waitUntil(telegram(env,'setMyCommands',{commands:botCommands}).catch(()=>{commandsSet=false}))}
+        if (ctx?.waitUntil && !commandsSet && result.status<300 && env.TELEGRAM_BOT_TOKEN) {commandsSet=true;const cmds=l=>localizedCommands[l].map(([command,description])=>({command,description}));ctx.waitUntil(Promise.all([telegram(env,'setMyCommands',{commands:cmds('uz')}),telegram(env,'setMyCommands',{commands:cmds('ru'),language_code:'ru'}),telegram(env,'setMyCommands',{commands:cmds('en'),language_code:'en'})]).catch(()=>{commandsSet=false}))}
         return result;
       }
       if (path.startsWith('/api/v1/')) {
@@ -472,5 +478,22 @@ export default {
       if (e instanceof SyntaxError || e.message==='invalid text' || e.message?.startsWith('Vaqt')) return fail(400,'input','Ma’lumotlarni tekshiring');
       return fail(500,'server','Serverda xatolik yuz berdi');
     }
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const res = await handle(request, env, ctx);
+    // API errors follow the interface language the client sends (x-ui-lang).
+    const lang = normLang(request.headers.get('x-ui-lang'));
+    if (lang && lang !== 'uz' && res.status >= 400 && (res.headers.get('content-type') || '').startsWith('application/json')) {
+      try {
+        const body = await res.clone().json();
+        if (body?.error?.message) {
+          body.error.message = translateError(lang, body.error.message);
+          return new Response(JSON.stringify(body), { status: res.status, headers: res.headers });
+        }
+      } catch { /* keep original */ }
+    }
+    return res;
   }
 };
