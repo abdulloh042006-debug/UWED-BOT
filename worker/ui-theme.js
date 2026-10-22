@@ -1,6 +1,6 @@
 // UWED v2 "Quiet Campus": calm surfaces, diplomatic blue (#38567e), burgundy for trust/danger, gold for achievement.
-const light='--bg:#eef1f6;--card:#fff;--text:#0c1c3a;--muted:#5a6882;--line:#dde3ed;--soft:#e7ecf4;--accent:#38567e;--accent-ink:#2f4c75;--tint:rgba(56,86,126,.1);--shadow:0 1px 2px rgba(12,28,58,.05),0 6px 18px rgba(12,28,58,.05);--nav-bg:#0c1c3a;--btn-a:#436594;--btn-b:#38567e;--ink:#0b1a36;--navy:#18305a;--on-dark:#fff;--on-dark-2:rgba(255,255,255,.72)';
-const dark='--bg:#070f1d;--card:#0f1c32;--text:#eaf0f9;--muted:#93a3bc;--line:#1f3250;--soft:#18273f;--accent:#5b86c4;--accent-ink:#9dbcea;--tint:rgba(110,155,215,.14);--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);--nav-bg:#13264a;--btn-a:#5a86c8;--btn-b:#4572b3;--ink:#0d1d3b;--navy:#1d3a6c;--on-dark:#fff;--on-dark-2:rgba(255,255,255,.72)';
+const light='--bg:#eef1f6;--card:#fff;--text:#0c1c3a;--muted:#5a6882;--line:#dde3ed;--soft:#e7ecf4;--accent:#38567e;--accent-ink:#2f4c75;--tint:rgba(56,86,126,.1);--shadow:0 1px 2px rgba(12,28,58,.05),0 6px 18px rgba(12,28,58,.05);--nav-bg:#0c1c3a;--btn-a:#436594;--btn-b:#38567e;--ink:#0b1a36;--navy:#18305a;--on-dark:#fff;--on-dark-2:rgba(255,255,255,.72);--glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.4);--glass-line:rgba(255,255,255,.8);--glass-shadow:0 8px 28px rgba(12,28,58,.1);--glass-hi:inset 0 1px 0 rgba(255,255,255,.95);--blob-a:rgba(56,86,126,.34);--blob-b:rgba(212,175,55,.26);--blob-c:rgba(138,0,25,.15)';
+const dark='--bg:#070f1d;--card:#0f1c32;--text:#eaf0f9;--muted:#93a3bc;--line:#1f3250;--soft:#18273f;--accent:#5b86c4;--accent-ink:#9dbcea;--tint:rgba(110,155,215,.14);--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);--nav-bg:#13264a;--btn-a:#5a86c8;--btn-b:#4572b3;--ink:#0d1d3b;--navy:#1d3a6c;--on-dark:#fff;--on-dark-2:rgba(255,255,255,.72);--glass:rgba(22,40,72,.52);--glass-2:rgba(22,40,72,.36);--glass-line:rgba(255,255,255,.12);--glass-shadow:0 10px 30px rgba(0,0,0,.35);--glass-hi:inset 0 1px 0 rgba(255,255,255,.12);--blob-a:rgba(70,120,210,.32);--blob-b:rgba(212,175,55,.16);--blob-c:rgba(190,30,60,.2)';
 export const themeCss = `
 :root{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:light;${light};--burgundy:#8a0019;--gold:#d4af37;--on-accent:#fff;--r:20px;--ease:cubic-bezier(.2,.8,.2,1)}
 html[data-theme=dark]{color-scheme:dark;${dark}}
@@ -209,4 +209,32 @@ nav.app-nav button[aria-current=page]{background:rgba(212,175,55,.16);color:var(
 .match-avatar .ui-icon{width:24px;height:24px}
 
 .section-heading{flex-wrap:wrap}.section-heading h2{flex:1 1 auto;min-width:0}
+
+/* v3.1 glass: ambient colour field + frosted translucent surfaces (only where backdrop-filter exists) */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 38% at 8% 2%,var(--blob-a),transparent 72%),radial-gradient(50% 32% at 100% 22%,var(--blob-b),transparent 72%),radial-gradient(64% 40% at 0% 78%,var(--blob-c),transparent 72%),radial-gradient(50% 30% at 100% 100%,var(--blob-a),transparent 72%)}
+@supports((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+.card,.quick-action,.next-card,.admin-launch,.chat-person,.empty-state,.admin-row,.stat,.dialog,details.card{background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--glass-hi),var(--glass-shadow);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+.empty-state{border-style:solid;background:var(--glass-2)}
+input,textarea,select{background:var(--glass-2);border-color:var(--glass-line);box-shadow:var(--glass-hi);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+html[data-theme=dark] input,html[data-theme=dark] textarea,html[data-theme=dark] select{border-color:rgba(255,255,255,.14)}
+input:focus,textarea:focus,select:focus{background:var(--glass);border-color:var(--accent)}
+.secondary,button.secondary{background:var(--glass-2);box-shadow:var(--glass-hi),0 0 0 1px var(--glass-line) inset;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.skill-chip,.pill:not(.gold):not(.bur):not(.ok):not(.warn):not(.bad){background:var(--glass-2);box-shadow:var(--glass-hi),0 0 0 1px var(--glass-line) inset}
+.chat-bubble:not(.mine){background:var(--glass);box-shadow:var(--glass-hi),0 0 0 1px var(--glass-line) inset;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+nav.app-nav{background:rgba(12,28,58,.76);-webkit-backdrop-filter:blur(24px) saturate(1.7);backdrop-filter:blur(24px) saturate(1.7);box-shadow:0 14px 34px rgba(5,12,28,.4),0 0 0 1px rgba(255,255,255,.16) inset,0 1px 0 rgba(255,255,255,.3) inset}
+html[data-theme=dark] nav.app-nav{background:rgba(19,38,74,.74)}
+.hero-stats button{background:rgba(255,255,255,.12);box-shadow:0 0 0 1px rgba(255,255,255,.22) inset,0 1px 0 rgba(255,255,255,.35) inset;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.scrim{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+body>p[role=status]{background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+}
+/* gloss on dark banners */
+.hero::after,.page-heading::before,.profile-intro::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(160deg,rgba(255,255,255,.2),rgba(255,255,255,0) 38%);box-shadow:0 0 0 1px rgba(255,255,255,.14) inset}
+.profile-intro{position:relative;overflow:hidden}
+.hero>*,.profile-intro>*{position:relative;z-index:1}
+.hero .hero-star{position:absolute;z-index:0}
+.hero-avatar{box-shadow:0 0 0 3px rgba(255,255,255,.28),0 8px 20px rgba(0,0,0,.25)}
+.quick-action .ui-icon,.next-card>.ui-icon:first-child,.match-avatar{box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 6px 14px rgba(12,28,58,.25)}
+
+.admin-launch{border-left:4px solid var(--burgundy)}.next-card.alert{border-color:var(--gold)}.state-error{border-left:4px solid var(--burgundy)}.note-card.unread{border-color:var(--accent)}
+.hero-star{opacity:.2;right:-50px;top:-46px}
 `;
