@@ -553,3 +553,19 @@ test('client picks the Telegram language on first launch, saves it and renders t
  await click({onb:'next'});await click({onb:'next'});await click({onb:'finish'});await wait('Where to start?');
  assert.match(root.innerHTML,/>Matches</);
 });
+test('webhook does not make Telegram retry forever on permanent Telegram errors; /health reports status',async()=>{
+ const x=setup(),old=globalThis.fetch;let status=403;
+ globalThis.fetch=async url=>String(url).includes('getWebhookInfo')?new Response(JSON.stringify({ok:true,result:{url:base+'/api/v1/bot/webhook',pending_update_count:0}}),{status:200}):new Response('{}',{status});
+ const h={'X-Telegram-Bot-Api-Secret-Token':'hook-secret'};
+ try{
+  const r=await x.call('/api/v1/bot/webhook','POST',{update_id:91,message:{text:'/start',chat:{id:1,type:'private'},from:{id:1}}},'',h);
+  assert.equal(r.status,200,'blocked bot (403) must not return 5xx');
+  const cb=await x.call('/api/v1/bot/webhook','POST',{update_id:92,callback_query:{id:'old',from:{id:1},data:'x'}},'',h);
+  assert.equal(cb.status,200,'expired callback (400) must not return 5xx');
+  status=500;
+  assert.equal((await x.call('/api/v1/bot/webhook','POST',{update_id:93,message:{text:'/start',chat:{id:1,type:'private'},from:{id:1}}},'',h)).status,500,'transient errors are retried');
+  const hl=await worker.fetch(new Request(base+'/health'),x.env),body=await hl.json();
+  assert.equal(hl.status,200);assert.equal(body.config.head_admin,true);assert.equal(body.webhook.url_matches,true);assert.ok(body.build);
+  assert.doesNotMatch(JSON.stringify(body),/test-token|hook-secret|999/);
+ }finally{globalThis.fetch=old}
+});

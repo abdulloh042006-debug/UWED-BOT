@@ -369,8 +369,12 @@ async function api(request, env, path, method) {
 
 async function telegram(env, method, payload) {
   const res=await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
-  if (!res.ok) throw Error('Telegram delivery failed');
+  if (!res.ok) { const e=Error('Telegram delivery failed'); e.status=res.status; throw e; }
+  return res;
 }
+// Telegram 4xx answers (bot blocked by the user, expired callback query, bad chat) are permanent:
+// retrying them would make Telegram resend the same update forever and block every later update.
+const permanentTelegramError = e => e?.status>=400 && e.status<500 && e.status!==429;
 async function flushOutbox(env) {
   if (!env.DB || !env.TELEGRAM_BOT_TOKEN) return;
   const jobs=await all(env.DB,`SELECT o.id,o.attempts,n.body,n.target,u.telegram_user_id,p.notify_bot,p.ui_lang FROM bot_outbox o JOIN notifications n ON n.id=o.notification_id JOIN users u ON u.id=n.user_id JOIN profiles p ON p.user_id=u.id WHERE o.status IN ('pending','sending') AND o.next_attempt_at<=CURRENT_TIMESTAMP ORDER BY n.created_at LIMIT 5`);
@@ -411,7 +415,7 @@ async function webhook(request, env) {
       }
     }
     try { await telegram(env,'answerCallbackQuery',{callback_query_id:callback.id,text:msg(cbLang,answerKey),show_alert:false}); }
-    catch(e){await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id));throw e}
+    catch(e){if(!permanentTelegramError(e)){await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id));throw e}}
   }
   if (chat && message.chat.type==='private') {
     const raw=String(message.text||''),command=raw.startsWith('/')?raw.split(/\s/)[0].split('@')[0]:'';
@@ -434,9 +438,29 @@ async function webhook(request, env) {
     else if (command) text=msg(lang,'unknown_command');
     else text=msg(lang,'plain_text');
     try { await telegram(env,'sendMessage',{chat_id:chat,text,reply_markup:{inline_keyboard:keyboard}}); }
-    catch (e) { await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id)); throw e; }
+    catch (e) { if (!permanentTelegramError(e)) { await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id)); throw e; } }
   }
   return json({ok:true});
+}
+
+// Public operational check: which build is live, which settings are present (booleans only) and
+// whether Telegram can deliver updates. No secrets, IDs or user data are returned.
+const BUILD = '2026-10-22-i18n-2';
+async function health(request, env) {
+  const out = { build: BUILD, version: env.CF_VERSION_METADATA?.id || null, config: {
+    db: !!env.DB, bucket: !!env.BUCKET, bot_token: !!env.TELEGRAM_BOT_TOKEN, webhook_secret: !!env.TELEGRAM_WEBHOOK_SECRET,
+    session_secret: !!env.SESSION_SECRET, miniapp_url: !!env.MINIAPP_URL, full_admin: !!env.FULL_ADMIN_TELEGRAM_ID, head_admin: !!env.HEAD_ADMIN_TELEGRAM_ID } };
+  try { if (env.DB) { const ids = await ensureMigrations(env.DB); out.migrations = ids.at(-1); } } catch { out.migrations = 'error'; }
+  if (env.TELEGRAM_BOT_TOKEN) {
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getWebhookInfo`);
+      const info = (await r.json()).result || {};
+      const expected = new URL('/api/v1/bot/webhook', request.url).toString();
+      out.webhook = { set: !!info.url, url_matches: info.url === expected, pending_updates: info.pending_update_count ?? null,
+        last_error: info.last_error_message || null, last_error_minutes_ago: info.last_error_date ? Math.round((Date.now() / 1000 - info.last_error_date) / 60) : null };
+    } catch { out.webhook = { error: 'telegram unreachable' }; }
+  }
+  return out;
 }
 
 async function handle(request, env, ctx) {
@@ -471,6 +495,7 @@ async function handle(request, env, ctx) {
         if (ctx?.waitUntil && env.DB && result.status<500) ctx.waitUntil(flushOutbox(env));
         return result;
       }
+      if (path==='/health' && method==='GET') return json(await health(request,env));
       if (path==='/app.js' && method==='GET') return new Response(client,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
       if (path==='/' && method==='GET') return new Response(page(),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org"}});
       return fail(404,'route','Sahifa topilmadi');
