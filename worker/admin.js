@@ -159,7 +159,8 @@ export async function admin(request,env,path,method,me){
       const b=await body(request),audience=choice(b.audience,enums.audience),text=cleanText(b.text,1000);if(!audience||!text)throw Error('announcement');
       const setting=await one(db,"SELECT value FROM admin_settings WHERE key='announcement_enabled'");if(setting?.value!=='true')return fail(409,'setting','E`lonlar o`chirilgan');
       const id=randomId();await run(db,'INSERT INTO announcements(id,audience,text,created_by) VALUES(?,?,?,?)',id,audience,text,me.id);
-      const users=await all(db,"SELECT u.id FROM users u WHERE u.suspended_at IS NULL AND (?='all' OR (?='students' AND u.role='student') OR (?='mentors' AND u.role='mentor'))",audience,audience,audience);
+      const top=[String(env.FULL_ADMIN_TELEGRAM_ID||'-'),String(env.HEAD_ADMIN_TELEGRAM_ID||'-')];
+      const users=await all(db,"SELECT u.id FROM users u WHERE u.suspended_at IS NULL AND u.id<>? AND (?='all' OR (u.telegram_user_id NOT IN (?,?) AND ((?='students' AND u.role='student') OR (?='mentors' AND u.role='mentor'))))",me.id,audience,top[0],top[1],audience,audience);
       for(const u of users){const nid=randomId();await db.batch([db.prepare('INSERT INTO notifications(id,user_id,kind,body,target,announcement_id) VALUES(?,?,?,?,?,?)').bind(nid,u.id,'announcement',text,'home',id),db.prepare('INSERT INTO bot_outbox(id,notification_id) VALUES(?,?)').bind(randomId(),nid)])}
       await audit(db,me,'announce','announcement',id,{audience,recipients:users.length});return json({id,queued:users.length},201);
     }

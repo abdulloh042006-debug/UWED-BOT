@@ -10,8 +10,9 @@ const first = (db, sql, ...args) => db.prepare(sql).bind(...args).first();
 
 async function apply(db) {
   await run(db, 'CREATE TABLE IF NOT EXISTS _sites_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+  const applied = new Set(((await db.prepare('SELECT id FROM _sites_migrations').all()).results || []).map(r => r.id));
   for (const migration of migrations) {
-    if (await first(db, 'SELECT id FROM _sites_migrations WHERE id=?', migration.id)) continue;
+    if (applied.has(migration.id)) continue;
     const statements = migration.sql.split(';').map(sql => sql.trim()).filter(Boolean);
     if (!statements.length) continue;
     const batch = [...statements.map(sql => db.prepare(sql)), db.prepare('INSERT INTO _sites_migrations(id) VALUES (?)').bind(migration.id)];

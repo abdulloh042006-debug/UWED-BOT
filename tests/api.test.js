@@ -201,7 +201,7 @@ test('browser client authenticates via Telegram and renders live admin API data'
  const x=setup();x.env.BOOTSTRAP_ADMIN_TELEGRAM_ID='999';await x.login(101);{const c=await x.login(999);await x.call('/api/v1/me','PATCH',{display_name:'User 999',interests:[],onboarded:true},c)}
  const root={innerHTML:'',handlers:{},querySelector(selector){return selector==='[name="privacy"]'?{value:''}:null},addEventListener(name,fn){this.handlers[name]=fn},prepend(){}},initData=await signed(999);let cookie='',requests=[];
  const browserFetch=async(path,options={})=>{requests.push(path);const headers={...options.headers};if(cookie)headers.cookie=cookie;const response=await worker.fetch(new Request(base+path,{method:options.method||'GET',headers,body:options.body}),x.env);if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response};
- new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,console});
+ new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,clearTimeout,console});
  const wait=async expected=>{for(let i=0;i<100;i++){if(root.innerHTML.includes(expected))return;await new Promise(resolve=>setTimeout(resolve,10))}assert.fail('Client did not render '+expected+': '+root.innerHTML.slice(0,300))};
  await wait('UWED Talent Network');
  assert.match(root.innerHTML,/class="app-nav"/,'student nav must be rendered');
@@ -469,7 +469,7 @@ test('mentors list exposes rating and taught skills; matches flag mentors',async
 test('first-time users land on the onboarding wizard and finish into the dashboard',async()=>{
  const x=setup(),root={innerHTML:'',handlers:{},querySelector(){return null},addEventListener(name,fn){this.handlers[name]=fn},prepend(){}},initData=await signed(777);let cookie='';
  const browserFetch=async(path,options={})=>{const headers={...options.headers};if(cookie)headers.cookie=cookie;const response=await worker.fetch(new Request(base+path,{method:options.method||'GET',headers,body:options.body}),x.env);if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response};
- new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,console});
+ new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,clearTimeout,console});
  const wait=async expected=>{for(let i=0;i<100;i++){if(root.innerHTML.includes(expected))return;await new Promise(resolve=>setTimeout(resolve,10))}assert.fail('Client did not render '+expected+': '+root.innerHTML.slice(0,300))};
  await wait('Xush kelibsiz');assert.doesNotMatch(root.innerHTML,/class="app-nav"/,'no nav during onboarding');
  const click=data=>root.handlers.click({target:{closest:()=>({dataset:data,disabled:false})}});
@@ -543,7 +543,7 @@ test('notifications are written in the recipient language',async()=>{
 test('client picks the Telegram language on first launch, saves it and renders translated screens',async()=>{
  const x=setup(),root={innerHTML:'',handlers:{},querySelector(){return null},addEventListener(name,fn){this.handlers[name]=fn},prepend(){}},initData=await signed(778);let cookie='';
  const browserFetch=async(path,options={})=>{const headers={...options.headers};if(cookie)headers.cookie=cookie;const response=await worker.fetch(new Request(base+path,{method:options.method||'GET',headers,body:options.body}),x.env);if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response};
- new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,initDataUnsafe:{user:{language_code:'ru'}},ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,console});
+ new Script(client).runInNewContext({document:{querySelector:()=>root},window:{Telegram:{WebApp:{initData,initDataUnsafe:{user:{language_code:'ru'}},ready(){},expand(){}}}},location:{search:''},URLSearchParams,fetch:browserFetch,setTimeout,clearTimeout,console});
  const wait=async expected=>{for(let i=0;i<100;i++){if(root.innerHTML.includes(expected))return;await new Promise(resolve=>setTimeout(resolve,10))}assert.fail('Client did not render '+expected+': '+root.innerHTML.slice(0,300))};
  await wait('Добро пожаловать');
  assert.equal((await x.call('/api/v1/me','GET',undefined,cookie)).data.ui_lang,'ru','detected language is stored for the bot');
@@ -568,4 +568,25 @@ test('webhook does not make Telegram retry forever on permanent Telegram errors;
   assert.equal(hl.status,200);assert.equal(body.config.head_admin,true);assert.equal(body.webhook.url_matches,true);assert.ok(body.build);
   assert.doesNotMatch(JSON.stringify(body),/test-token|hook-secret|999/);
  }finally{globalThis.fetch=old}
+});
+test('announcements to students never reach the sender or top admins, even with a student role in the DB',async()=>{
+ const x=setup();x.env.FULL_ADMIN_TELEGRAM_ID='888';
+ const head=await x.login(999),student=await x.login(101),owner=await x.login(888);
+ x.db.raw.prepare("UPDATE users SET role='student' WHERE telegram_user_id='888'").run();
+ const a=await x.call('/api/v1/admin/announcements','POST',{audience:'students',text:'Faqat talabalar'},head);
+ assert.equal(a.status,201);assert.equal(a.data.queued,1);
+ assert.equal((await x.call('/api/v1/notifications','GET',undefined,student)).data.items[0].body,'Faqat talabalar');
+ assert.equal((await x.call('/api/v1/notifications','GET',undefined,owner)).data.items.length,0);
+ assert.equal((await x.call('/api/v1/notifications','GET',undefined,head)).data.items.length,0);
+ const all=await x.call('/api/v1/admin/announcements','POST',{audience:'all',text:'Hammaga'},head);
+ assert.equal(all.data.queued,2,'everyone except the sender');
+});
+test('shell shows a splash, app.js is versioned and cached, login returns the profile',async()=>{
+ const x=setup(),html=await (await worker.fetch(new Request(base+'/'),x.env)).text();
+ assert.doesNotMatch(html,/Telegram orqali oching/);assert.match(html,/class="splash"/);
+ const v=html.match(/\/app\.js\?v=(\w+)/)[1];
+ assert.match((await worker.fetch(new Request(base+'/app.js?v='+v),x.env)).headers.get('cache-control'),/immutable/);
+ assert.equal((await worker.fetch(new Request(base+'/app.js?v=old'),x.env)).headers.get('cache-control'),'no-cache');
+ const r=await x.call('/api/v1/auth/telegram','POST',{initData:await signed(404)});
+ assert.equal(r.status,200);assert.equal(r.data.me.display_name,'User 404');assert.ok('admin_tier' in r.data.me);
 });

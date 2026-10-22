@@ -1,5 +1,5 @@
 import { verifyInitData, signSession, verifySession, scoreMatch, nextRequestStatus, cleanText, randomId } from './core.js';
-import { page, client } from './ui.js';
+import { page, client, clientVersion } from './ui.js';
 import { evidence, verificationEvidence, teams } from './teams.js';
 import { chats } from './chat.js';
 import { protectedTier, adminTier, isTopAdmin } from './admin-access.js';
@@ -84,7 +84,8 @@ async function api(request, env, path, method) {
     }
     if(user.suspended_at) return fail(403,'suspended','Hisobingiz to`xtatilgan');
     const session = await signSession(user.id, env.SESSION_SECRET);
-    return json({ ok: true }, 200, { 'set-cookie': `uwed_session=${session}; HttpOnly; Secure; SameSite=Lax; Path=/api/v1; Max-Age=3600` });
+    const meOut = { ...(await profile(env.DB, user.id)), admin_tier: adminTier(user, env) };
+    return json({ ok: true, me: meOut }, 200, { 'set-cookie': `uwed_session=${session}; HttpOnly; Secure; SameSite=Lax; Path=/api/v1; Max-Age=3600` });
   }
   const me = await actor(request, env);
   if (!me) return fail(401,'auth','Telegram orqali qayta kiring');
@@ -445,7 +446,7 @@ async function webhook(request, env) {
 
 // Public operational check: which build is live, which settings are present (booleans only) and
 // whether Telegram can deliver updates. No secrets, IDs or user data are returned.
-const BUILD = '2026-10-22-i18n-2';
+const BUILD = '2026-10-23-perf';
 async function health(request, env) {
   const out = { build: BUILD, version: env.CF_VERSION_METADATA?.id || null, config: {
     db: !!env.DB, bucket: !!env.BUCKET, bot_token: !!env.TELEGRAM_BOT_TOKEN, webhook_secret: !!env.TELEGRAM_WEBHOOK_SECRET,
@@ -496,7 +497,7 @@ async function handle(request, env, ctx) {
         return result;
       }
       if (path==='/health' && method==='GET') return json(await health(request,env));
-      if (path==='/app.js' && method==='GET') return new Response(client,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+      if (path==='/app.js' && method==='GET') return new Response(client,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':url.searchParams.get('v')===clientVersion?'public, max-age=31536000, immutable':'no-cache','x-content-type-options':'nosniff'}});
       if (path==='/' && method==='GET') return new Response(page(),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org"}});
       return fail(404,'route','Sahifa topilmadi');
     } catch (e) {

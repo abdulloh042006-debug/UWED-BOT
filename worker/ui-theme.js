@@ -157,6 +157,12 @@ label.check{display:flex;align-items:center;gap:var(--space-2);min-height:var(--
 .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:var(--radius-pill);background:var(--text-secondary);transition:transform var(--motion-normal) var(--ease-standard),background-color var(--motion-normal) var(--ease-standard)}
 .switch:checked{background:var(--action-primary);border-color:var(--action-primary)}.switch:checked::after{transform:translateX(20px);background:var(--on-action-primary)}
 .switch:hover{border-color:var(--text-muted)}
+.splash{min-height:80dvh;display:grid;place-content:center;justify-items:center;gap:var(--space-4);text-align:center;color:var(--text-primary)}
+.splash-mark{width:64px;height:64px;display:grid;place-items:center;border-radius:var(--radius-xl);background:var(--action-primary);color:var(--on-action-primary)}
+.splash b{font-size:var(--fs-h3);font-weight:700}
+.splash-bar{display:block;position:relative;width:120px;height:4px;border-radius:var(--radius-pill);background:var(--surface-subtle);overflow:hidden}
+.splash-bar::after{content:"";position:absolute;inset:0;width:40%;border-radius:inherit;background:var(--action-primary);animation:splash 1s var(--ease-standard) infinite}
+@keyframes splash{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 /* onboarding */
 .steps{list-style:none;display:flex;gap:var(--space-2);margin:var(--space-1) 0 var(--space-5);padding:0}
 .steps li{flex:1;display:grid;gap:var(--space-1);justify-items:center;text-align:center;font-size:var(--fs-caption);font-weight:500;color:var(--text-muted);position:relative}
