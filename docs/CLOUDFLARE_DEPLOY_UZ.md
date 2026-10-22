@@ -27,8 +27,8 @@ Build command bo‘sh, deploy command: `npx wrangler deploy`. Worker nomi `uwed-
 ## 5. Telegram
 - BotFather → `/mybots` → bot → **Bot Settings → Menu Button** → URL = `MINIAPP_URL`.
 - Webhook: brauzer manzil qatoriga (token va secret o‘rniga o‘zingiznikini qo‘yib) yozing:
-  `https://api.telegram.org/bot<TOKEN>/setWebhook?url=<MINIAPP_URL>telegram/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>`
-  (webhook yo‘lini `worker/index.js` dan tekshiring.)
+  `https://api.telegram.org/bot<TOKEN>/setWebhook?url=<MINIAPP_URL>api/v1/bot/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>`
+  (Secret faqat 16–256 ta harf/raqam/`_`/`-` bo‘lsin. Menyu tugmasi va webhook'ni `npm run bot:setup -- --apply` ham o‘rnatadi, lekin u terminal talab qiladi.)
 
 ## 6. Tekshirish
 `/start` → ilovani oching → ikki xil akkauntda kirib ko‘ring. Faqat shundan keyin "real Telegram'da tekshirildi" deyish mumkin.
