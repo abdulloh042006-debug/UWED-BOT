@@ -45,6 +45,21 @@ test('webhook rejects incorrect secret and deduplicates Telegram update',async()
  const x=setup(),old=globalThis.fetch,calls=[];globalThis.fetch=async(url,init)=>{calls.push({url,init});return new Response('{}',{status:200})};
  try {const body={update_id:5,message:{text:'/start',chat:{id:101,type:'private'}}};assert.equal((await x.call('/api/v1/bot/webhook','POST',body)).status,403);assert.equal((await x.call('/api/v1/bot/webhook','POST',body,'',{'X-Telegram-Bot-Api-Secret-Token':'hook-secret'})).status,200);assert.equal((await x.call('/api/v1/bot/webhook','POST',body,'',{'X-Telegram-Bot-Api-Secret-Token':'hook-secret'})).data.duplicate,true);assert.equal(calls.length,1);assert.match(calls[0].init.body,/Ilovani ochish/);assert.match(calls[0].init.body,/Assalomu alaykum/);assert.match(calls[0].init.body,/portfolio orqali ko‘rsating/)}finally{globalThis.fetch=old}
 });
+test('bot greets by name on /start, answers plain text and works without MINIAPP_URL',async()=>{
+ const x=setup(),old=globalThis.fetch,calls=[];globalThis.fetch=async(url,init)=>{calls.push({url:String(url),body:String(init?.body||'')});return new Response('{}',{status:200})};
+ const h={'X-Telegram-Bot-Api-Secret-Token':'hook-secret'};
+ try{
+  delete x.env.MINIAPP_URL;
+  const send=(id,text)=>x.call('/api/v1/bot/webhook','POST',{update_id:id,message:{text,chat:{id:101,type:'private'},from:{id:101,first_name:'Aziza'}}},'',h);
+  assert.equal((await send(31,'/start')).status,200);
+  const start=calls.find(c=>c.url.includes('sendMessage'));
+  assert.match(start.body,/Assalomu alaykum, Aziza!/);assert.match(start.body,/screen=matches/);assert.match(start.body,/screen=settings/);
+  const before=calls.filter(c=>c.url.includes('sendMessage')).length;
+  assert.equal((await send(32,'salom')).status,200);
+  assert.equal(calls.filter(c=>c.url.includes('sendMessage')).length,before+1,'plain text gets a reply');
+  assert.match(calls.filter(c=>c.url.includes('sendMessage')).at(-1).body,/Ilovani ochish/);
+ }finally{globalThis.fetch=old}
+});
 test('project application to member contribution to moderated portfolio; cross-user file denied',async()=>{
  const x=setup();x.env.BOOTSTRAP_ADMIN_TELEGRAM_ID='999';const admin=await x.login(999),owner=await x.login(101),member=await x.login(202),outsider=await x.login(303);
  const due=new Date(Date.now()+604800000).toISOString();
@@ -201,8 +216,12 @@ test('browser client authenticates via Telegram and renders live admin API data'
  await root.handlers.submit({preventDefault(){},target:{id:'search',dataset:{},elements:{q:{value:'IELTS'}},querySelector:()=>({disabled:false})}});
  assert.ok(requests.some(x=>x==='/api/v1/matches?q=IELTS'));
  await root.handlers.click({target:{closest:()=>({dataset:{view:'profile'}})}});
+ await wait('Profil to‘liqligi');
+ assert.match(root.innerHTML,/<button>Saqlash<\/button>/);assert.doesNotMatch(root.innerHTML,/id="verification"/,'verification lives in settings');
+ await root.handlers.click({target:{closest:()=>({dataset:{view:'settings'}})}});
  await wait('Vaqt mintaqasi');
- assert.ok(root.innerHTML.indexOf('Vaqt mintaqasi')<root.innerHTML.indexOf('<button>Saqlash</button>'),'Saqlash should be after profile settings');
+ for(const k of ['notify_bot','privacy','ai_consent','timezone'])assert.match(root.innerHTML,new RegExp('data-pref="'+k+'"'),'settings expose '+k);
+ assert.match(root.innerHTML,/id="verification"/);
 });
 
 test('pending skills keep associations and become matchable after approval',async()=>{

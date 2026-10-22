@@ -384,8 +384,10 @@ async function flushOutbox(env) {
     catch { await run(env.DB,"UPDATE bot_outbox SET attempts=attempts+1,next_attempt_at=datetime('now', '+' || min(3600, 30 * (1 << min(attempts, 7))) || ' seconds'),last_error='delivery failed' WHERE id=?",job.id); }
   }
 }
+let commandsSet=false;
+const botCommands=[{command:'start',description:'Boshlash'},{command:'matches',description:'Mos sheriklar'},{command:'sessions',description:'Sessiyalar'},{command:'messages',description:'Xabarlar'},{command:'profile',description:'Profil'},{command:'settings',description:'Sozlamalar'},{command:'help',description:'Yordam'}];
 async function webhook(request, env) {
-  if (!env.DB || !env.TELEGRAM_WEBHOOK_SECRET || !env.TELEGRAM_BOT_TOKEN || !env.MINIAPP_URL) return fail(503,'config','Xizmat sozlanmagan');
+  if (!env.DB || !env.TELEGRAM_WEBHOOK_SECRET || !env.TELEGRAM_BOT_TOKEN) return fail(503,'config','Xizmat sozlanmagan');
   if (request.headers.get('X-Telegram-Bot-Api-Secret-Token')!==env.TELEGRAM_WEBHOOK_SECRET) return fail(403,'webhook','Ruxsat yo‘q');
   const update=await request.json();
   if (!Number.isSafeInteger(update.update_id)) return fail(400,'update','Yangilanish noto‘g‘ri');
@@ -407,17 +409,25 @@ async function webhook(request, env) {
     catch(e){await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id));throw e}
   }
   if (chat && message.chat.type==='private') {
-    const command=String(message.text||'').split(/\s/)[0].split('@')[0];
-    const paths={ '/start':'', '/help':'', '/profile':'profile', '/matches':'matches', '/sessions':'sessions', '/projects':'projects', '/notifications':'home', '/messages':'chat' };
-    const route=paths[command];
-    if (route!==undefined) {
-      const url=new URL(env.MINIAPP_URL); if(url.protocol!=='https:') return fail(503,'config','HTTPS manzil sozlanmagan');
-      if(route)url.searchParams.set('screen',route);
-      // All entry routes use the same Web App; route hints are not identity.
-      const text=command==='/help'?'UWED Talent Network: profilni to‘ldiring, mos sheriklarni toping va bilim almashish sessiyalarini boshqaring.':command==='/start'?'Assalomu alaykum! UWED Talent Network platformasiga xush kelibsiz.\nBilim almashing, mentorlar bilan bog‘laning, loyiha jamoalarini toping va yutuqlaringizni portfolio orqali ko‘rsating.':'UWED Talent Network ilovasini oching:';
-      try { await telegram(env,'sendMessage',{chat_id:chat,text,reply_markup:{inline_keyboard:[[{text:'Ilovani ochish',web_app:{url:url.toString()}}]]}}); }
-      catch (e) { await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id)); throw e; }
+    const raw=String(message.text||''),command=raw.startsWith('/')?raw.split(/\s/)[0].split('@')[0]:'';
+    const paths={ '/start':'', '/help':'', '/profile':'profile', '/matches':'matches', '/sessions':'sessions', '/projects':'projects', '/notifications':'home', '/messages':'chat', '/settings':'settings' };
+    const route=command?paths[command]:'';
+    const base=env.MINIAPP_URL||new URL(request.url).origin;
+    const url=new URL(base); if(url.protocol!=='https:') return fail(503,'config','HTTPS manzil sozlanmagan');
+    const open=screen=>{const u=new URL(url.toString());if(screen)u.searchParams.set('screen',screen);return {web_app:{url:u.toString()}}};
+    // All entry routes use the same Web App; route hints are not identity.
+    const first=String(message.from?.first_name||'').trim().slice(0,40);
+    let text,keyboard=[[{text:'Ilovani ochish',...open(route)}]];
+    if (command==='/help') text='UWED Talent Network: profilni to‘ldiring, mos sheriklarni toping va bilim almashish sessiyalarini boshqaring.\n\nBuyruqlar:\n/start — boshlash\n/matches — mos sheriklar\n/sessions — sessiyalar\n/messages — xabarlar\n/profile — profil\n/settings — sozlamalar';
+    else if (command==='/start') {
+      text='Assalomu alaykum'+(first?', '+first:'')+'! UWED Talent Network platformasiga xush kelibsiz.\nBilim almashing, mentorlar bilan bog‘laning, loyiha jamoalarini toping va yutuqlaringizni portfolio orqali ko‘rsating.';
+      keyboard=[[{text:'Ilovani ochish',...open('')}],[{text:'Mos sheriklar',...open('matches')},{text:'Sessiyalar',...open('sessions')}],[{text:'Profil',...open('profile')},{text:'Sozlamalar',...open('settings')}]];
     }
+    else if (route!==undefined && command) text='UWED Talent Network ilovasini oching:';
+    else if (command) text='Bu buyruq tanilmadi. /help — barcha buyruqlar.';
+    else text='Men faqat ilovaga yo‘l ko‘rsataman. Davom etish uchun “Ilovani ochish” tugmasini bosing yoki /help yuboring.';
+    try { await telegram(env,'sendMessage',{chat_id:chat,text,reply_markup:{inline_keyboard:keyboard}}); }
+    catch (e) { await run(env.DB,'DELETE FROM webhook_events WHERE update_id=?',String(update.update_id)); throw e; }
   }
   return json({ok:true});
 }
@@ -433,6 +443,7 @@ export default {
       if (path==='/api/v1/bot/webhook' && method==='POST') {
         const result=await webhook(request,env);
         if (ctx?.waitUntil && env.DB && result.status<500) ctx.waitUntil(flushOutbox(env));
+        if (ctx?.waitUntil && !commandsSet && result.status<300 && env.TELEGRAM_BOT_TOKEN) {commandsSet=true;ctx.waitUntil(telegram(env,'setMyCommands',{commands:botCommands}).catch(()=>{commandsSet=false}))}
         return result;
       }
       if (path.startsWith('/api/v1/')) {

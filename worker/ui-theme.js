@@ -145,6 +145,18 @@ label.check{display:flex;align-items:center;gap:var(--space-2);min-height:var(--
 .or{text-align:center;margin:0}.back .ui-icon{transform:rotate(180deg)}.back{width:auto}
 .line{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}.line>span{display:flex;align-items:center;gap:var(--space-2);min-width:0;overflow-wrap:anywhere}
 .loading-cards{display:grid;gap:var(--space-3)}
+/* compact profile + settings */
+.profile-head{display:grid;gap:var(--space-4);margin-top:var(--space-2)}.profile-id{display:flex;align-items:center;gap:var(--space-3)}.profile-id>div{flex:1;min-width:0}.profile-id h1{margin:0 0 var(--space-1);font-size:var(--fs-h2);line-height:var(--lh-h2);overflow-wrap:anywhere}
+.icon-btn{flex:none;width:var(--target-min);padding:0}.icon-btn .ui-icon{width:20px;height:20px}
+.profile-head .completeness{gap:var(--space-1)}.profile-head .completeness header{font-size:var(--fs-sm);color:var(--text-secondary)}
+.about p{margin-top:0}.about .fold{margin-top:var(--space-3)}
+.settings{padding:0}.setting{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);min-height:56px;padding:var(--space-3) var(--space-4);font-weight:400}
+.setting+.setting{border-top:1px solid var(--border)}.setting>span:first-child{display:grid;gap:2px;min-width:0}.setting b{font-weight:600}.setting small{line-height:18px}
+.setting.col{flex-direction:column;align-items:stretch;gap:var(--space-3)}
+.switch{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:48px;height:28px;min-height:0;margin:0;padding:0;border:1px solid var(--border-strong);border-radius:var(--radius-pill);background:var(--surface-subtle);cursor:pointer;transition:background-color var(--motion-normal) var(--ease-standard)}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:var(--radius-pill);background:var(--text-secondary);transition:transform var(--motion-normal) var(--ease-standard),background-color var(--motion-normal) var(--ease-standard)}
+.switch:checked{background:var(--action-primary);border-color:var(--action-primary)}.switch:checked::after{transform:translateX(20px);background:var(--on-action-primary)}
+.switch:hover{border-color:var(--text-muted)}
 /* onboarding */
 .steps{list-style:none;display:flex;gap:var(--space-2);margin:var(--space-1) 0 var(--space-5);padding:0}
 .steps li{flex:1;display:grid;gap:var(--space-1);justify-items:center;text-align:center;font-size:var(--fs-caption);font-weight:500;color:var(--text-muted);position:relative}

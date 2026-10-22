@@ -3,6 +3,13 @@ name = "uwed-bot"
 main = "worker/index.js"
 compatibility_date = "2026-10-01"
 
+# Keep variables that were added in the dashboard (wrangler deploy would otherwise delete them).
+keep_vars = true
+
+# Public (non-secret) setting. The bot falls back to the request origin when missing.
+[vars]
+MINIAPP_URL = "https://uwed-bot.abdulloh042006.workers.dev"
+
 # D1 database (binding name must stay "DB"). Migrations are applied by the worker at runtime.
 # database_id is filled in after the database is created in the Cloudflare dashboard.
 [[d1_databases]]
