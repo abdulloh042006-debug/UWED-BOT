@@ -9,3 +9,8 @@ Presentation-only. No API, auth, DB or route changes. Telegram Mini App only.
 - Outside Telegram: clear "open from Telegram" screen. Loading state is a neutral skeleton.
 - Motion: entrance on view change only, meter fill, toast/dialog, press feedback; transform/opacity only; `prefers-reduced-motion` clamps all.
 - Verified: `npm run check` 29/29, Chromium render at 390x844 and 360x740 (light/dark, admin), no overflow, touch targets >=40px. Not verified on real devices; not deployed.
+
+## v2.1 — backend + flows
+- Migration `0008_onboarding.sql`: `profiles.onboarded_at`.
+- API: `PATCH /me {onboarded:true}`, `DELETE /skills/:id/:direction`, `GET /home`, `POST /notifications/read` (+ `unread` in `GET /notifications`), availability overlap guard (409) and 56-slot cap, mentors list with `rating_average/rating_count/teach`, `mentor` flag in matches, profile `teach_items/learn_items/onboarded`.
+- UI: 3-step onboarding, skill chips with remove + catalog suggestions, weekly availability grid, next-session/pending cards on home, unread notifications with "mark all read", nav dot for pending invitations, redesigned mentors and session cards.
