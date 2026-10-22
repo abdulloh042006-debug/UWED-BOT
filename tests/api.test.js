@@ -590,3 +590,20 @@ test('shell shows a splash, app.js is versioned and cached, login returns the pr
  const r=await x.call('/api/v1/auth/telegram','POST',{initData:await signed(404)});
  assert.equal(r.status,200);assert.equal(r.data.me.display_name,'User 404');assert.ok('admin_tier' in r.data.me);
 });
+test('skills: catalog names match case-insensitively, custom skills show as pending to the owner, admins approve or reject',async()=>{
+ const x=setup(),head=await x.login(999),a=await x.login(701);
+ assert.equal((await x.call('/api/v1/skills','POST',{name:'figma',direction:'teach'},a)).status,201,'catalog skill, any case');
+ assert.equal((await x.call('/api/v1/skills','POST',{name:'Blender 3D',direction:'teach'},a)).status,202);
+ assert.equal((await x.call('/api/v1/skills','POST',{name:'Kulolchilik',direction:'learn'},a)).status,202);
+ let me=(await x.call('/api/v1/me','GET',undefined,a)).data;
+ assert.deepEqual(me.teach_items.map(s=>[s.name,!!s.pending]),[['Figma',false],['Blender 3D',true]]);
+ assert.deepEqual(me.teach,['Figma'],'matching uses approved skills only');
+ const pending=(await x.call('/api/v1/admin/skills','GET',undefined,head)).data.items;
+ const blender=pending.find(s=>s.name==='Blender 3D'),clay=pending.find(s=>s.name==='Kulolchilik');
+ assert.equal((await x.call('/api/v1/admin/skills/'+blender.id,'PATCH',{},head)).status,200);
+ assert.equal((await x.call('/api/v1/admin/skills/'+clay.id,'DELETE',{},head)).status,200);
+ assert.equal((await x.call('/api/v1/admin/skills/'+clay.id,'DELETE',{},a)).status,403);
+ me=(await x.call('/api/v1/me','GET',undefined,a)).data;
+ assert.ok(me.teach.includes('Blender 3D')&&me.teach.includes('Figma'),'approved skill joins matching');
+ assert.equal(me.learn_items.length,0,'rejected skill removed');
+});

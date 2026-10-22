@@ -30,8 +30,9 @@ async function profile(db, id) {
   const out = publicProfile(p);
   out.onboarded = !!p.onboarded_at;
   out.ui_lang = normLang(p.ui_lang);
-  out.teach_items = skills.filter(x => x.direction === 'teach').map(x => ({ id: x.id, name: x.name }));
-  out.learn_items = skills.filter(x => x.direction === 'learn').map(x => ({ id: x.id, name: x.name }));
+  const pending = await all(db, 'SELECT s.id,s.name,us.direction FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=? AND s.approved=0', id);
+  out.teach_items = [...skills, ...pending.map(x => ({ ...x, pending: true }))].filter(x => x.direction === 'teach').map(x => ({ id: x.id, name: x.name, ...(x.pending ? { pending: true } : {}) }));
+  out.learn_items = [...skills, ...pending.map(x => ({ ...x, pending: true }))].filter(x => x.direction === 'learn').map(x => ({ id: x.id, name: x.name, ...(x.pending ? { pending: true } : {}) }));
   return out;
 }
 async function notify(db, userId, kind, body, target) {
@@ -126,7 +127,7 @@ async function api(request, env, path, method) {
   if (path === 'skills' && method === 'POST') {
     const b = await request.json(), name = text(b.name,60);
     if (!name || !['teach','learn'].includes(b.direction)) return fail(400,'input','Ko‘nikmani tekshiring');
-    let skill = await row(env.DB,'SELECT id,approved FROM skills WHERE name=?',name);
+    let skill = await row(env.DB,'SELECT id,approved FROM skills WHERE name=? OR lower(name)=lower(?) ORDER BY approved DESC LIMIT 1',name,name);
     if (!skill) {
       const id=randomId();
       await run(env.DB,'INSERT OR IGNORE INTO skills(id,name,approved) VALUES(?,?,0)',id,name);
@@ -344,6 +345,13 @@ async function api(request, env, path, method) {
     return json({items:await all(env.DB,'SELECT id,name FROM skills WHERE approved=0 ORDER BY name LIMIT 100')});
   }
   const skillReview=path.match(/^admin\/skills\/([^/]+)$/);
+  if (skillReview && method==='DELETE') {
+    if (!['admin','moderator'].includes(me.role)) return fail(403,'role','Ruxsat yo‘q');
+    const s=await row(env.DB,'SELECT id FROM skills WHERE id=? AND approved=0',skillReview[1]);
+    if (!s) return fail(404,'skill','Ko‘nikma topilmadi');
+    await env.DB.batch([env.DB.prepare('DELETE FROM user_skills WHERE skill_id=?').bind(s.id),env.DB.prepare('DELETE FROM skills WHERE id=?').bind(s.id),env.DB.prepare('INSERT INTO audit_log(id,actor_id,action,object_type,object_id) VALUES(?,?,?,?,?)').bind(randomId(),me.id,'reject','skill',s.id)]);
+    return json({ok:true});
+  }
   if (skillReview && method==='PATCH') {
     if (!['admin','moderator'].includes(me.role)) return fail(403,'role','Ruxsat yo‘q');
     const changed=await run(env.DB,'UPDATE skills SET approved=1 WHERE id=? AND approved=0',skillReview[1]);
@@ -446,7 +454,7 @@ async function webhook(request, env) {
 
 // Public operational check: which build is live, which settings are present (booleans only) and
 // whether Telegram can deliver updates. No secrets, IDs or user data are returned.
-const BUILD = '2026-10-23-perf';
+const BUILD = '2026-10-23-skills';
 async function health(request, env) {
   const out = { build: BUILD, version: env.CF_VERSION_METADATA?.id || null, config: {
     db: !!env.DB, bucket: !!env.BUCKET, bot_token: !!env.TELEGRAM_BOT_TOKEN, webhook_secret: !!env.TELEGRAM_WEBHOOK_SECRET,
