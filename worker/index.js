@@ -165,7 +165,7 @@ async function api(request, env, path, method) {
       const match=scoreMatch({...mine,slots:ranges(me.id)},{...other,slots:mine.timezone===other.timezone?ranges(p.id):[]});
       if (!match) continue;
       const skill=await row(env.DB,'SELECT id FROM skills WHERE name=? AND approved=1',match.teach[0] || match.reciprocal[0]);
-      if (skill) items.push({id:p.id,display_name:other.display_name,skill_id:skill.id,mentor:other.role==='mentor',...match});
+      if (skill) items.push({id:p.id,display_name:other.display_name,skill_id:skill.id,mentor:other.role==='mentor',verified:!!other.verified_university,faculty:other.faculty||'',bio:String(other.bio||'').slice(0,160),interests:(other.interests||[]).slice(0,4),their_teach:(other.teach||[]).slice(0,4),...match});
     }
     const q=(new URL(request.url)).searchParams.get('q')?.trim().toLocaleLowerCase()||'';
     return json({items:items.filter(x=>!q||x.display_name.toLocaleLowerCase().includes(q)||x.teach.some(s=>s.toLocaleLowerCase().includes(q))).sort((a,b)=>b.score-a.score)});

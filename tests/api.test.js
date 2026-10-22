@@ -290,9 +290,12 @@ test('head administrator appoints ordinary admins while ordinary admins cannot e
 test('production HTML includes responsive brand styling and no external icon font',async()=>{
  const {page}=await import('../worker/ui.js');
  const html=page();
- assert.match(html,/--accent:#38567e/);
- assert.match(html,/--burgundy:#8a0019/);
- assert.match(html,/--gold:#d4af37/);
+ assert.match(html,/--background:#080e18/);
+ assert.match(html,/--surface:#101a28/);
+ assert.match(html,/--action-primary:#5b8def/);
+ assert.match(html,/html\[data-theme=light\]/);
+ assert.match(html,/prefers-reduced-motion/);
+ assert.doesNotMatch(html,/backdrop-filter/);
  assert.match(html,/nav\.app-nav/);
  assert.match(html,/safe-area-inset-bottom/);
  assert.doesNotMatch(html,/fonts\.googleapis\.com|fontawesome|cdnjs\.cloudflare\.com/);
@@ -441,7 +444,7 @@ test('mentors list exposes rating and taught skills; matches flag mentors',async
  await x.call('/api/v1/skills','POST',{name:'IELTS',direction:'learn'},a);
  const items=(await x.call('/api/v1/mentors','GET',undefined,a)).data.items;
  assert.equal(items.length,1);assert.equal(items[0].teach,'IELTS');assert.equal(items[0].rating_count,0);assert.equal(items[0].rating_average,null);
- assert.equal((await x.call('/api/v1/matches','GET',undefined,a)).data.items[0].mentor,true);
+ {const m=(await x.call('/api/v1/matches','GET',undefined,a)).data.items[0];assert.equal(m.mentor,true);assert.equal(m.faculty,'IR');assert.deepEqual(m.their_teach,['IELTS']);assert.ok(Array.isArray(m.interests));assert.equal(typeof m.bio,'string')}
 });
 
 test('first-time users land on the onboarding wizard and finish into the dashboard',async()=>{
