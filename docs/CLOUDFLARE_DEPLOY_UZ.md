@@ -5,7 +5,7 @@ Hech qanday maxfiy kalit repoga yozilmaydi.
 
 ## 1. D1 baza
 Dashboard → **Storage & databases → D1 → Create database** → nomi: `uwed-talent-network`.
-Yaratilgach **Database ID** ni nusxalang va `wrangler.toml` ichidagi `REPLACE_WITH_D1_DATABASE_ID` o‘rniga qo‘ying
+Yaratilgach **Database ID** ni nusxalang va `wrangler.toml` ichidagi `4ec98ce8-15b6-42d5-85da-38f0addb5c28` o‘rniga qo‘ying
 (ID maxfiy emas; menga yuborsangiz o‘zim yozib qo‘yaman). Jadvallar worker birinchi so‘rovda o‘zi yaratiladi (`ensureMigrations`).
 
 ## 2. R2 bucket
