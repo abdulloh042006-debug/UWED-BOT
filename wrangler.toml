@@ -9,6 +9,10 @@ keep_vars = true
 # Public (non-secret) setting. The bot falls back to the request origin when missing.
 [vars]
 MINIAPP_URL = "https://uwed-bot.abdulloh042006.workers.dev"
+# Telegram user IDs of the two top administrators (public identifiers, not credentials:
+# admin access still requires Telegram-signed initData from that account).
+FULL_ADMIN_TELEGRAM_ID = "7691931395"
+HEAD_ADMIN_TELEGRAM_ID = "5032359493"
 
 # D1 database (binding name must stay "DB"). Migrations are applied by the worker at runtime.
 # database_id is filled in after the database is created in the Cloudflare dashboard.
@@ -23,4 +27,4 @@ binding = "BUCKET"
 bucket_name = "uwed-evidence"
 
 # Secrets are NOT stored here. Add in dashboard: Worker > Settings > Variables and Secrets:
-#   TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, SESSION_SECRET, BOOTSTRAP_ADMIN_TELEGRAM_ID, MINIAPP_URL
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, SESSION_SECRET (optional: BOOTSTRAP_ADMIN_TELEGRAM_ID, GEMINI_API_KEY)

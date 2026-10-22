@@ -1,6 +1,6 @@
 // Roles are assigned after Telegram's signed initData has been verified.
-// The top two identities come exclusively from server-side runtime configuration.
-// No Telegram ID or elevated identity is embedded in the client or repository.
+// The top two identities come exclusively from server-side configuration (wrangler.toml vars).
+// A Telegram ID alone grants nothing: access still requires Telegram-signed initData.
 export function protectedTier(telegramId, env) {
   const id = String(telegramId || '');
   if (!/^[1-9]\d{0,19}$/.test(id)) return null;
