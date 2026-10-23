@@ -397,6 +397,10 @@ async function flushOutbox(env) {
         const id=job.target.slice(9),r=await row(env.DB,"SELECT status,created_at FROM exchange_requests WHERE id=?",id);
         if(r?.status==='sent' && Date.now()-Date.parse(r.created_at.replace(' ','T')+'Z')<48*3600000){const l=job.ui_lang||'uz';payload.reply_markup={inline_keyboard:[[{text:msg(l,'btn_accept'),callback_data:'ex:accept:'+id},{text:msg(l,'btn_reject'),callback_data:'ex:reject:'+id}],[{text:msg(l,'btn_open'),web_app:{url:env.MINIAPP_URL}}]]}};
       }
+      else if(job.target.startsWith('chat:')&&env.MINIAPP_URL){
+        const u=new URL(env.MINIAPP_URL);u.searchParams.set('screen',job.target);
+        payload.reply_markup={inline_keyboard:[[{text:msg(job.ui_lang||'uz','btn_open_chat'),web_app:{url:u.toString()}}]]};
+      }
       await telegram(env,'sendMessage',payload);await run(env.DB,"UPDATE bot_outbox SET status='sent',attempts=attempts+1 WHERE id=?",job.id);
     }
     catch { await run(env.DB,"UPDATE bot_outbox SET attempts=attempts+1,next_attempt_at=datetime('now', '+' || min(3600, 30 * (1 << min(attempts, 7))) || ' seconds'),last_error='delivery failed' WHERE id=?",job.id); }
@@ -454,7 +458,7 @@ async function webhook(request, env) {
 
 // Public operational check: which build is live, which settings are present (booleans only) and
 // whether Telegram can deliver updates. No secrets, IDs or user data are returned.
-const BUILD = '2026-10-23-skills';
+const BUILD = '2026-10-23-chat-privacy';
 async function health(request, env) {
   const out = { build: BUILD, version: env.CF_VERSION_METADATA?.id || null, config: {
     db: !!env.DB, bucket: !!env.BUCKET, bot_token: !!env.TELEGRAM_BOT_TOKEN, webhook_secret: !!env.TELEGRAM_WEBHOOK_SECRET,

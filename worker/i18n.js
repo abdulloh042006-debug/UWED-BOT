@@ -621,7 +621,8 @@ const MSG = {
   n_time_confirmed: { uz: 'Sessiya vaqti tasdiqlandi', ru: 'Время сессии подтверждено', en: 'The session time was confirmed' },
   n_time_changed: { uz: 'Sessiya vaqti o‘zgartirishga yuborildi', ru: 'Предложено изменить время сессии', en: 'A session time change was proposed' },
   n_verification: { uz: 'Arizangiz {result}', ru: 'Ваша заявка {result}', en: 'Your application was {result}' },
-  n_chat: { uz: '{name} sizga xabar yozdi:\n{preview}', ru: '{name} написал(а) вам:\n{preview}', en: '{name} sent you a message:\n{preview}' },
+  n_chat: { uz: '{name} sizga yangi xabar yubordi. Ilovada o‘qing.', ru: '{name} отправил(а) вам новое сообщение. Прочитайте в приложении.', en: '{name} sent you a new message. Read it in the app.' },
+  btn_open_chat: { uz: 'Xabarni ochish', ru: 'Открыть сообщение', en: 'Open message' },
   // match reasons
   r_teach: { uz: '{skills} bo‘yicha o‘rgata oladi', ru: 'Может научить: {skills}', en: 'Can teach {skills}' },
   r_help: { uz: 'Siz {skills} bo‘yicha yordam bera olasiz', ru: 'Вы можете помочь: {skills}', en: 'You can help with {skills}' },

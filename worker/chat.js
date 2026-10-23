@@ -79,11 +79,10 @@ export async function chats(request,env,path,method,me){
   const burst=await count(db,"SELECT count(*) AS n FROM direct_messages WHERE sender_id=? AND recipient_id=? AND created_at>=datetime('now','-10 seconds')",me.id,p.id);
   if(burst>=5)return fail(429,'rate','Xabarlarni sekinroq yuboring');
   const id=randomId(),notification=randomId();
-  const preview=body.length>100?body.slice(0,100)+'…':body;
   const lang=(await one(db,'SELECT ui_lang FROM profiles WHERE user_id=?',p.id))?.ui_lang||'uz';
   await db.batch([
     db.prepare('INSERT INTO direct_messages(id,sender_id,recipient_id,body) VALUES(?,?,?,?)').bind(id,me.id,p.id,body),
-    db.prepare('INSERT INTO notifications(id,user_id,kind,body,target) VALUES(?,?,?,?,?)').bind(notification,p.id,'chat',msg(lang,'n_chat',{name:me.display_name,preview}),'chat:'+me.id),
+    db.prepare('INSERT INTO notifications(id,user_id,kind,body,target) VALUES(?,?,?,?,?)').bind(notification,p.id,'chat',msg(lang,'n_chat',{name:me.display_name}),'chat:'+me.id),
     db.prepare('INSERT INTO bot_outbox(id,notification_id) VALUES(?,?)').bind(randomId(),notification)
   ]);
   return json({id,queued:1},201);

@@ -398,6 +398,7 @@ test('private 1:1 chat: discovery, delivery, read state, privacy, block and auth
  const sent=await x.call('/api/v1/chat/'+b,'POST',{body:'Salom Vali!'},ali);assert.equal(sent.status,201,JSON.stringify(sent.data));
  assert.equal((await x.call('/api/v1/chat/conversations','GET',undefined,vali)).data.items[0].unread,1);
  assert.equal((await x.call('/api/v1/notifications','GET',undefined,vali)).data.items[0].target,'chat:'+a);
+ assert.ok(!(await x.call('/api/v1/notifications','GET',undefined,vali)).data.items[0].body.includes('Salom Vali'),'chat notification must not leak message text');
  assert.equal((await x.call('/api/v1/chat/'+a,'GET',undefined,vali)).data.items[0].body,'Salom Vali!');
  assert.equal((await x.call('/api/v1/chat/conversations','GET',undefined,vali)).data.items[0].unread,0);
  assert.equal((await x.call('/api/v1/chat/conversations','GET',undefined,outsider)).data.items.length,0);
@@ -536,7 +537,7 @@ test('notifications are written in the recipient language',async()=>{
  const bob=(await x.call('/api/v1/me','GET',undefined,b)).data.id;
  assert.equal((await x.call('/api/v1/chat/'+bob,'POST',{body:'Привет!'},a)).status,201);
  const notes=(await x.call('/api/v1/notifications','GET',undefined,b)).data.items;
- assert.match(notes[0].body,/написал\(а\) вам:\nПривет!/);
+ assert.match(notes[0].body,/отправил\(а\) вам новое сообщение/);
  assert.equal(msg('en','n_invite',{name:'A',skill:'IELTS'}),'A sent you an invitation for IELTS');
  assert.deepEqual(LANGS,['uz','ru','en']);
 });
