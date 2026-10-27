@@ -111,11 +111,14 @@ npx --yes wrangler@4 deploy --dry-run --outdir /tmp/wr   # proves Cloudflare can
   `--accent-text` for red text/icons (`#A51C30` light, `#EF6B78` dark — never use `--action-primary` as a text colour
   on dark). 4 px spacing scale (`--space-*`), radii (`--radius-*`), type scale, motion 120/200/300 ms with
   reduced-motion support. Dark is the default theme; light and auto are user options.
-- Glass is allowed only on surfaces (`.card`, `.quick-grid`, `.next-card`, `.metric`, `.empty-state`, `nav.app-nav`)
-  via `--glass*` tokens, over the quiet `.bg-mark` "UW / ED / 26" background in the page shell. Keep the
-  `@supports not (backdrop-filter)` and `prefers-reduced-transparency` solid fallbacks. Background letters stay
-  low-contrast so text placed directly on the page still passes 4.5:1. No gradients or glow.
-- Logo: the UW/ED monogram (`.logo-mark` inline SVG in the splash; source files in `design/logo/`).
+- Glass is allowed only on surfaces (`.card`, `.quick-grid`, `.next-card`, `.metric`, `.empty-state`, `.hero`,
+  `.page-heading`, `.section-heading`, `.splash`, `.gate>div`, `nav.app-nav`) via `--glass*` tokens, over the bold
+  `.bg-mark` "UW / ED / 26" background in the page shell (owner's design: full-contrast letters, carmine W, soft "26").
+  Because the letters are strong, **no text may sit directly on the page** — wrap new screens/states in one of those
+  surfaces. Keep the `@supports not (backdrop-filter)` and `prefers-reduced-transparency` solid fallbacks. No
+  gradients or glow.
+- Logo: the UW/ED monogram drawn as text (`.logo-mark`: two rows, "ED" indented, red "W", weight 900) in the splash
+  and the home hero, matching the owner's logo board; source files in `design/logo/`.
   Status colour always paired with an icon or word. Tap targets ≥ 44 px. Focus ring 2 px solid `--focus`.
 - CSP: `script-src 'self' https://telegram.org; style-src 'unsafe-inline'`. No external fonts, images or CDNs;
   icons are inline SVG from `ui-icons.js`; system font stack.

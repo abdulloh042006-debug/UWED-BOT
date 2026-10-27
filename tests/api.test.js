@@ -320,6 +320,9 @@ test('production HTML includes responsive brand styling and no external icon fon
  assert.match(html,/@supports not \(\(backdrop-filter/);
  assert.match(html,/class="bg-mark" aria-hidden="true"/);
  assert.match(html,/class="logo-mark"/);
+ assert.match(html,/--bg-letter:#1f1d1a/);
+ assert.match(html,/--accent-mark:#a51c30/);
+ assert.match(html,/class="logo-mark"><b>U<i>W<\/i><\/b><b>ED<\/b>/);
  assert.match(html,/nav\.app-nav/);
  assert.match(html,/safe-area-inset-bottom/);
  assert.doesNotMatch(html,/fonts\.googleapis\.com|fontawesome|cdnjs\.cloudflare\.com/);

@@ -1,8 +1,9 @@
 // UWED Talent Network design system — "UWED26" (owner-approved Oct 2026).
 // Token architecture, scales and rules follow the project's Product Design System (semantic color roles, 4px spacing,
 // role-based radii, named type styles, 120/200/300ms motion). Palette: Pantone 2026 Cloud Dancer (#F0EEE9) with a warm
-// near-black, and one carmine red (#A51C30) as the action colour. Surfaces are frosted glass over a quiet big-letter
-// "UW / ED / 26" background; text always sits on a glass or solid surface, with solid fallbacks for browsers without
+// near-black, and one carmine red (#A51C30) as the action colour. Surfaces are frosted glass over the bold big-letter
+// "UW / ED / 26" background from the owner's design; text always sits on a glass or solid surface (the hero and page
+// and section headings included), with solid fallbacks for browsers without
 // backdrop-filter and for prefers-reduced-transparency. System fonts only: the CSP allows no external fonts.
 // Status colours are used for status only and are always paired with a word or an icon. No gradients or glow.
 const light = `
@@ -10,8 +11,8 @@ const light = `
 --text-primary:#1f1d1a;--text-secondary:#4a4641;--text-muted:#5c5852;--text-inverse:#f0eee9;
 --border:#dad6ce;--border-strong:#7c7770;
 --action-primary:#a51c30;--action-primary-hover:#8a1626;--on-action-primary:#ffffff;--action-secondary:#e6e1d8;--focus:#0b57d0;
---accent-text:#a51c30;--accent-mark:#edcfd3;--bg-letter:#dcd8cf;--bg-letter-soft:#e6e2da;
---glass:#ffffff99;--glass-strong:#ffffffcc;--glass-border:#ffffffd9;--glass-hi:inset 0 1px 0 #ffffff,0 1px 2px #1f1d1a0f,0 8px 24px #1f1d1a12;
+--accent-text:#a51c30;--accent-mark:#a51c30;--bg-letter:#1f1d1a;--bg-letter-soft:#d3cec4;
+--glass:#ffffffa6;--glass-strong:#ffffffb3;--glass-border:#ffffffcc;--glass-hi:inset 0 1.5px 0 #ffffff,0 1px 2px #1f1d1a0f,0 10px 30px #1f1d1a14;
 --status-success:#1b6b3a;--status-success-surface:#e2f1e6;--status-warning:#85500a;--status-warning-surface:#fbefd6;
 --status-danger:#b3261e;--on-status-danger:#ffffff;--status-danger-surface:#fbe4e1;--status-info:#1f5fa8;--status-info-surface:#e1ecf8;
 --overlay:#1f1d1a99;--shadow-sm:0 1px 2px #1f1d1a1f;--shadow-md:0 4px 12px #1f1d1a1f;--shadow-lg:0 12px 32px #1f1d1a29`;
@@ -20,8 +21,8 @@ const dark = `
 --text-primary:#f0eee9;--text-secondary:#bdb7ac;--text-muted:#a39d92;--text-inverse:#1c1b19;
 --border:#3a3631;--border-strong:#8c877f;
 --action-primary:#a51c30;--action-primary-hover:#bd2a40;--on-action-primary:#ffffff;--action-secondary:#33302b;--focus:#7db1ff;
---accent-text:#ef6b78;--accent-mark:#4a2027;--bg-letter:#2e2b27;--bg-letter-soft:#262421;
---glass:#26242199;--glass-strong:#262421cc;--glass-border:#ffffff1f;--glass-hi:inset 0 1px 0 #ffffff26,0 10px 30px #00000059;
+--accent-text:#ef6b78;--accent-mark:#a51c30;--bg-letter:#f0eee9;--bg-letter-soft:#33302b;
+--glass:#1c1b19b8;--glass-strong:#1c1b19d9;--glass-border:#ffffff29;--glass-hi:inset 0 1px 0 #ffffff33,0 10px 30px #00000059;
 --status-success:#6fcf8f;--status-success-surface:#12281d;--status-warning:#f0b350;--status-warning-surface:#2b2110;
 --status-danger:#ff8a80;--on-status-danger:#2a0a08;--status-danger-surface:#2e1715;--status-info:#8fb9f0;--status-info-surface:#14243a;
 --overlay:#000000b3;--shadow-sm:0 1px 2px #00000080;--shadow-md:0 4px 12px #00000099;--shadow-lg:0 12px 32px #000000b3`;
@@ -164,7 +165,7 @@ label.check{display:flex;align-items:center;gap:var(--space-2);min-height:var(--
 .switch:checked{background:var(--action-primary);border-color:var(--accent-text)}.switch:checked::after{transform:translateX(20px);background:var(--on-action-primary)}
 .switch:hover{border-color:var(--text-muted)}
 .splash{min-height:80dvh;display:grid;place-content:center;justify-items:center;gap:var(--space-4);text-align:center;color:var(--text-primary)}
-.splash-mark{width:88px;height:88px;display:grid;place-items:center;border-radius:20px;background:var(--surface-inverse);color:var(--text-inverse);box-shadow:var(--shadow-md)}.splash-mark .logo-mark{width:60px;height:60px;color:inherit}
+.splash-mark{display:block;border-radius:18px;box-shadow:var(--shadow-md)}.splash-mark .logo-mark{width:80px;height:80px;padding-left:15px;border-radius:18px;font-size:34px}
 .splash b{font-size:var(--fs-h3);font-weight:700}
 .splash-bar{display:block;position:relative;width:120px;height:4px;border-radius:var(--radius-pill);background:var(--surface-subtle);overflow:hidden}
 .splash-bar::after{content:"";position:absolute;inset:0;width:40%;border-radius:inherit;background:var(--action-primary);animation:splash 1s var(--ease-standard) infinite}
@@ -265,12 +266,17 @@ main{padding-bottom:var(--space-8)}
 /* UWED26: big-letter background + frosted glass surfaces */
 .bg-mark{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;user-select:none;font-weight:900;letter-spacing:-.06em;line-height:.85;color:var(--bg-letter)}
 .bg-mark span{position:absolute;white-space:nowrap;font-size:min(68vw,300px)}
-.bg-mark span:nth-child(1){left:-3%;top:4%}.bg-mark span:nth-child(2){left:9%;top:33%}.bg-mark span:nth-child(3){left:-2%;top:62%;color:var(--bg-letter-soft)}
+.bg-mark span:nth-child(1){left:-3.5%;top:8%}.bg-mark span:nth-child(2){left:10%;top:36%}.bg-mark span:nth-child(3){left:-2.5%;top:64%;color:var(--bg-letter-soft)}
 .bg-mark i{font-style:normal;color:var(--accent-mark)}
-.card,.quick-grid,.next-card,.admin-launch,.metric,.empty-state{background:var(--glass);border-color:var(--glass-border);box-shadow:var(--glass-hi);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%)}
+.card,.quick-grid,.next-card,.admin-launch,.metric,.empty-state,.hero,.page-heading,.section-heading,.splash,.gate>div{background:var(--glass);border-color:var(--glass-border);box-shadow:var(--glass-hi);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%)}
+.hero,.page-heading,.splash,.gate>div{padding:var(--space-4) var(--space-5);border:1px solid var(--glass-border);border-radius:var(--radius-xl)}
+.splash{min-height:0;margin:20dvh auto 0;width:max-content;max-width:100%;padding:var(--space-8) var(--space-6)}
+.section-heading{padding:var(--space-2) var(--space-4);border:1px solid var(--glass-border);border-radius:var(--radius-xl)}
 .card.flat{background:var(--glass)}
 nav.app-nav{background:var(--glass-strong);border-color:var(--glass-border);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%)}
-.logo-mark{display:block;width:72px;height:72px;color:var(--text-primary)}.logo-mark .w{fill:var(--action-primary)}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.card,.quick-grid,.next-card,.admin-launch,.metric,.empty-state,.card.flat{background:var(--surface)}nav.app-nav{background:var(--surface)}}
-@media(prefers-reduced-transparency:reduce){.card,.quick-grid,.next-card,.admin-launch,.metric,.empty-state,.card.flat,nav.app-nav{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}.bg-mark{display:none}}
+/* UW/ED monogram, drawn as text exactly like the owner's logo board: two rows, ED indented, red W */
+.logo-mark{display:inline-flex;flex-direction:column;justify-content:center;flex:none;width:2.6em;height:2.6em;padding-left:.55em;border-radius:var(--radius-pill);background:var(--surface-inverse);color:var(--text-inverse);font-size:20px;font-weight:900;letter-spacing:-.07em;line-height:.8}
+.logo-mark b{display:block;font-weight:inherit}.logo-mark b+b{padding-left:.25em}.logo-mark i{font-style:normal;color:var(--action-primary)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.card,.quick-grid,.next-card,.admin-launch,.metric,.empty-state,.card.flat,.hero,.page-heading,.section-heading,.splash,.gate>div{background:var(--surface)}nav.app-nav{background:var(--surface)}}
+@media(prefers-reduced-transparency:reduce){.card,.quick-grid,.next-card,.admin-launch,.metric,.empty-state,.card.flat,.hero,.page-heading,.section-heading,.splash,.gate>div,nav.app-nav{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}.bg-mark{display:none}}
 `;
