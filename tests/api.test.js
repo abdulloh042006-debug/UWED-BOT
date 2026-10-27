@@ -309,12 +309,17 @@ test('head administrator appoints ordinary admins while ordinary admins cannot e
 test('production HTML includes responsive brand styling and no external icon font',async()=>{
  const {page}=await import('../worker/ui.js');
  const html=page();
- assert.match(html,/--background:#080e18/);
- assert.match(html,/--surface:#101a28/);
- assert.match(html,/--action-primary:#5b8def/);
+ // UWED26 design: Cloud Dancer + warm near-black + carmine, glass surfaces with solid fallbacks
+ assert.match(html,/--background:#1c1b19/);
+ assert.match(html,/--background:#f0eee9/);
+ assert.match(html,/--action-primary:#a51c30/);
  assert.match(html,/html\[data-theme=light\]/);
  assert.match(html,/prefers-reduced-motion/);
- assert.doesNotMatch(html,/backdrop-filter/);
+ assert.match(html,/backdrop-filter/);
+ assert.match(html,/prefers-reduced-transparency:reduce/);
+ assert.match(html,/@supports not \(\(backdrop-filter/);
+ assert.match(html,/class="bg-mark" aria-hidden="true"/);
+ assert.match(html,/class="logo-mark"/);
  assert.match(html,/nav\.app-nav/);
  assert.match(html,/safe-area-inset-bottom/);
  assert.doesNotMatch(html,/fonts\.googleapis\.com|fontawesome|cdnjs\.cloudflare\.com/);

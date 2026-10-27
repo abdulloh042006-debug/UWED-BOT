@@ -458,7 +458,7 @@ async function webhook(request, env) {
 
 // Public operational check: which build is live, which settings are present (booleans only) and
 // whether Telegram can deliver updates. No secrets, IDs or user data are returned.
-const BUILD = '2026-10-23-chat-privacy';
+const BUILD = '2026-10-27-uwed26-design';
 async function health(request, env) {
   const out = { build: BUILD, version: env.CF_VERSION_METADATA?.id || null, config: {
     db: !!env.DB, bucket: !!env.BUCKET, bot_token: !!env.TELEGRAM_BOT_TOKEN, webhook_secret: !!env.TELEGRAM_WEBHOOK_SECRET,
