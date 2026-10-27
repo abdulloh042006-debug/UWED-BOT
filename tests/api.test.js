@@ -562,6 +562,22 @@ test('client picks the Telegram language on first launch, saves it and renders t
  await click({onb:'next'});await click({onb:'next'});await click({onb:'finish'});await wait('Where to start?');
  assert.match(root.innerHTML,/>Matches</);
 });
+test('worker re-registers a missing bot webhook from the cron and when the Mini App opens, using MINIAPP_URL',async()=>{
+ const x=setup(),old=globalThis.fetch;let current='',sets=[];
+ globalThis.fetch=async(url,init)=>{const u=String(url);if(u.includes('getWebhookInfo'))return new Response(JSON.stringify({ok:true,result:{url:current}}),{status:200});if(u.includes('setWebhook')){const b=JSON.parse(init.body);sets.push(b);current=b.url}return new Response('{}',{status:200})};
+ try{
+  const jobs=[],ctx={waitUntil:p=>jobs.push(p)};
+  await worker.scheduled({},x.env,ctx);await Promise.all(jobs);
+  assert.equal(sets.length,1);assert.equal(sets[0].url,'https://example.test/api/v1/bot/webhook');assert.equal(sets[0].secret_token,'hook-secret');assert.equal(sets[0].drop_pending_updates,false);assert.deepEqual(sets[0].allowed_updates,['message','callback_query']);
+  jobs.length=0;await worker.scheduled({},x.env,ctx);await Promise.all(jobs);
+  assert.equal(sets.length,1,'an already correct webhook is left alone');
+  current='';jobs.length=0;
+  await worker.fetch(new Request('https://evil.example/',{headers:{host:'evil.example'}}),x.env,ctx);await Promise.all(jobs);
+  assert.equal(sets.length,2,'opening the Mini App repairs it');assert.equal(sets[1].url,'https://example.test/api/v1/bot/webhook','never trusts the request host');
+  jobs.length=0;await worker.fetch(new Request(base+'/'),x.env,ctx);await Promise.all(jobs);
+  assert.equal(jobs.length,0,'page loads are throttled');
+ }finally{globalThis.fetch=old}
+});
 test('webhook does not make Telegram retry forever on permanent Telegram errors; /health reports status',async()=>{
  const x=setup(),old=globalThis.fetch;let status=403;
  globalThis.fetch=async url=>String(url).includes('getWebhookInfo')?new Response(JSON.stringify({ok:true,result:{url:base+'/api/v1/bot/webhook',pending_update_count:0}}),{status:200}):new Response('{}',{status});

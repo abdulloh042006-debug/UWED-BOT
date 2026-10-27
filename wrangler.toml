@@ -28,3 +28,8 @@ bucket_name = "uwed-evidence"
 
 # Secrets are NOT stored here. Add in dashboard: Worker > Settings > Variables and Secrets:
 #   TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, SESSION_SECRET (optional: BOOTSTRAP_ADMIN_TELEGRAM_ID, GEMINI_API_KEY)
+
+# Every 10 minutes the Worker checks its Telegram webhook and re-registers it if something removed it
+# (otherwise the bot silently stops answering /start).
+[triggers]
+crons = ["*/10 * * * *"]

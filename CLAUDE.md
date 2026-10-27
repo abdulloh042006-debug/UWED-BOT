@@ -73,6 +73,9 @@ npx --yes wrangler@4 deploy --dry-run --outdir /tmp/wr   # proves Cloudflare can
 ## Telegram bot
 
 - Webhook: `POST /api/v1/bot/webhook`, header `X-Telegram-Bot-Api-Secret-Token` must equal the secret.
+- The Worker re-registers its own webhook (`ensureWebhook` in `worker/index.js`) from the 10-minute cron in
+  `wrangler.toml` and when the Mini App is opened (throttled to 5 min). It uses `MINIAPP_URL` and the dashboard
+  secret, so the owner normally never has to call `setWebhook` by hand.
 - Owner re-sets it with
   `https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://uwed-bot.abdulloh042006.workers.dev/api/v1/bot/webhook&secret_token=<SECRET>&drop_pending_updates=true`.
 - The webhook must return 2xx for permanent Telegram errors (blocked bot, expired callback): a 5xx makes Telegram

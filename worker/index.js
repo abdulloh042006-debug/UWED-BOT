@@ -384,6 +384,23 @@ async function telegram(env, method, payload) {
 // Telegram 4xx answers (bot blocked by the user, expired callback query, bad chat) are permanent:
 // retrying them would make Telegram resend the same update forever and block every later update.
 const permanentTelegramError = e => e?.status>=400 && e.status<500 && e.status!==429;
+// The Worker keeps its own webhook registered. If anything removes or changes it (another script using the same
+// bot token, a manual deleteWebhook), Telegram stops delivering /start. Checked by the cron trigger and, at most
+// every 5 minutes per isolate, when the Mini App is opened. Uses MINIAPP_URL, never the request Host header.
+let webhookCheckedAt=0;
+async function ensureWebhook(env) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET || !env.MINIAPP_URL) return { skipped: true };
+  const expected=new URL('/api/v1/bot/webhook',env.MINIAPP_URL).toString();
+  const info=(await (await telegram(env,'getWebhookInfo',{})).json()).result||{};
+  if (info.url===expected) return { changed: false };
+  await telegram(env,'setWebhook',{url:expected,secret_token:env.TELEGRAM_WEBHOOK_SECRET,allowed_updates:['message','callback_query'],drop_pending_updates:false});
+  return { changed: true };
+}
+function maybeEnsureWebhook(env, ctx) {
+  if (!ctx?.waitUntil || Date.now()-webhookCheckedAt<300000) return;
+  webhookCheckedAt=Date.now();
+  ctx.waitUntil(ensureWebhook(env).catch(()=>{webhookCheckedAt=0}));
+}
 async function flushOutbox(env) {
   if (!env.DB || !env.TELEGRAM_BOT_TOKEN) return;
   const jobs=await all(env.DB,`SELECT o.id,o.attempts,n.body,n.target,u.telegram_user_id,p.notify_bot,p.ui_lang FROM bot_outbox o JOIN notifications n ON n.id=o.notification_id JOIN users u ON u.id=n.user_id JOIN profiles p ON p.user_id=u.id WHERE o.status IN ('pending','sending') AND o.next_attempt_at<=CURRENT_TIMESTAMP ORDER BY n.created_at LIMIT 5`);
@@ -458,7 +475,7 @@ async function webhook(request, env) {
 
 // Public operational check: which build is live, which settings are present (booleans only) and
 // whether Telegram can deliver updates. No secrets, IDs or user data are returned.
-const BUILD = '2026-10-28-uwed26-logo';
+const BUILD = '2026-10-28-webhook-autofix';
 async function health(request, env) {
   const out = { build: BUILD, version: env.CF_VERSION_METADATA?.id || null, config: {
     db: !!env.DB, bucket: !!env.BUCKET, bot_token: !!env.TELEGRAM_BOT_TOKEN, webhook_secret: !!env.TELEGRAM_WEBHOOK_SECRET,
@@ -506,10 +523,12 @@ async function handle(request, env, ctx) {
           result=me?(me.suspended_at?fail(403,'suspended','Hisobingiz to`xtatilgan'):await (route.startsWith('verification-evidence/')?verificationEvidence:evidence)(request,env,route,method,me)):fail(401,'auth','Telegram orqali qayta kiring');
         } else result=await api(request,env,route,method);
         if (ctx?.waitUntil && env.DB && result.status<500) ctx.waitUntil(flushOutbox(env));
+        if (route==='auth/telegram' && result.status<300) maybeEnsureWebhook(env,ctx);
         return result;
       }
       if (path==='/health' && method==='GET') return json(await health(request,env));
       if (path==='/app.js' && method==='GET') return new Response(client,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':url.searchParams.get('v')===clientVersion?'public, max-age=31536000, immutable':'no-cache','x-content-type-options':'nosniff'}});
+      if (path==='/' && method==='GET') maybeEnsureWebhook(env,ctx);
       if (path==='/' && method==='GET') return new Response(page(),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org"}});
       return fail(404,'route','Sahifa topilmadi');
     } catch (e) {
@@ -533,5 +552,9 @@ export default {
       } catch { /* keep original */ }
     }
     return res;
+  },
+  // Cron trigger (wrangler.toml [triggers]): re-register the bot webhook if it went missing.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(ensureWebhook(env).catch(()=>{}));
   }
 };
